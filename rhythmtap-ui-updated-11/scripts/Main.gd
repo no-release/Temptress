@@ -109,8 +109,18 @@ func _ready():
 	# Deferred so Godot's layout pass runs first and size.x values are real
 	call_deferred("_update_all_hud")
 
-	# RoomManager drives the run from ActiveRun (guild quest) when present
-	room_manager.start_run()
+	# Phase 8: returning from FirstMeetVN — resume the same room, do not restart the quest
+	if FirstMeetBridge.return_to_combat:
+		FirstMeetBridge.return_to_combat = false
+		var idx: int = FirstMeetBridge.saved_room_index
+		FirstMeetBridge.apply_combat(game_manager)
+		_gold_display = float(game_manager.player_gold)
+		_gold_target = _gold_display
+		room_manager.restore_at_room(idx)
+		FirstMeetBridge.clear()
+	else:
+		# RoomManager drives the run from ActiveRun (guild quest) when present
+		room_manager.start_run()
 
 # ── HUD Update ────────────────────────────────────────────────────────────────
 func _update_all_hud():
@@ -204,10 +214,11 @@ func _on_room_started(room: Dictionary):
 	match room.get("type", ""):
 		"combat":
 			var enemy = room.get("enemy", "slime_girl")
+			# Phase 8: unmet enemies go to full-screen VN, then cut back into combat
 			if not MetaSave.has_met_enemy(enemy):
-				await _play_first_meet_intro(enemy)
-				MetaSave.mark_enemy_met(enemy)
-				MetaSave.save_to_disk()
+				FirstMeetBridge.begin(enemy, room_manager.get_room_number() - 1, game_manager)
+				get_tree().change_scene_to_file("res://scenes/FirstMeetVN.tscn")
+				return
 			if game_manager.game_state == game_manager.GameState.TREASURE:
 				game_manager.continue_after_treasure(enemy)
 			else:
@@ -300,19 +311,7 @@ func _on_game_over(_enemy_name: String):
 	get_tree().change_scene_to_file("res://scenes/Town.tscn")
 
 
-# ── Phase 6: first-meet enemy intro ───────────────────────────────────────────
-func _play_first_meet_intro(enemy_id: String) -> void:
-	game_manager.set_process(false)
-	var pages := FirstMeetScenes.enemy_pages(enemy_id)
-	var pretty := enemy_id.replace("_", " ").capitalize()
-	var title := "- FIRST MEETING: %s -" % pretty
-	for i in range(pages.size()):
-		var last: bool = i >= pages.size() - 1
-		var btn := "Face her" if last else "Continue (%d/%d)" % [i + 1, pages.size()]
-		_show_choice_overlay(title, pages[i], btn, func(): pass)
-		await _overlay_done
-	game_manager.set_process(true)
-
+# ── Rest / shop overlays (Phase 5+) ───────────────────────────────────────────
 func _run_rest_room() -> void:
 	var heal := int(game_manager.player_max_health * 0.35)
 	game_manager.player_health = mini(game_manager.player_max_health, game_manager.player_health + heal)
