@@ -1,0 +1,173 @@
+[gd_scene format=3 uid="uid://main"]
+
+[ext_resource type="Script" uid="uid://8ye7xq0tpm63" path="res://scripts/GameManager.gd" id="1_gm"]
+[ext_resource type="Script" uid="uid://uijf1t2gjbk2" path="res://scripts/BeatBar.gd" id="2_bb"]
+[ext_resource type="Theme" uid="uid://dc2ciocqsob3a" path="res://main_theme.tres" id="2_vcsgt"]
+[ext_resource type="Script" uid="uid://blkqhfpuiq4cp" path="res://scripts/Background.gd" id="3_bg"]
+[ext_resource type="Script" uid="uid://dtp6pxir8qm1j" path="res://scripts/Main.gd" id="4_main"]
+[ext_resource type="PackedScene" uid="uid://tophud" path="res://scenes/TopHud.tscn" id="5_tophud"]
+[ext_resource type="PackedScene" uid="uid://enemycard" path="res://scenes/EnemyCard.tscn" id="6_enemycard"]
+[ext_resource type="PackedScene" uid="uid://b16bxam81msdy" path="res://scenes/DialogueBubble.tscn" id="7_dialogue"]
+[ext_resource type="PackedScene" uid="uid://chiyy37pq6psv" path="res://scenes/TreasureScreen.tscn" id="8_treasure"]
+[ext_resource type="Script" uid="uid://b51g6qtbb3mu" path="res://scripts/RoomManager.gd" id="9_rm"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_loser_normal"]
+bg_color = Color(0.45, 0.08, 0.08, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.35, 0.35, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.4)
+shadow_size = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_loser_pressed"]
+bg_color = Color(0.3, 0.05, 0.05, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.35, 0.35, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_loser_hover"]
+bg_color = Color(0.6, 0.1, 0.1, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.5, 0.5, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.4)
+shadow_size = 6
+
+[node name="Main" type="Node" unique_id=1257121190]
+script = ExtResource("4_main")
+
+[node name="Background" type="Control" parent="." unique_id=864771579]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_vcsgt")
+script = ExtResource("3_bg")
+
+[node name="GameManager" type="Node" parent="." unique_id=1557407883]
+script = ExtResource("1_gm")
+
+[node name="RoomManager" type="Node" parent="." unique_id=847012264]
+script = ExtResource("9_rm")
+
+[node name="SoundPlayers" type="Node" parent="." unique_id=524738687]
+
+[node name="BeatSound" type="AudioStreamPlayer" parent="SoundPlayers" unique_id=783728181]
+volume_db = 2.0
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=160540726]
+
+[node name="BeatBar" type="Control" parent="UI" unique_id=1018732306]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_vcsgt")
+script = ExtResource("2_bb")
+
+[node name="TopHud" parent="UI" unique_id=952012767 instance=ExtResource("5_tophud")]
+
+[node name="EnemyCardAnchor" type="Control" parent="UI" unique_id=553765565]
+layout_mode = 3
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -110.0
+offset_top = -205.0
+offset_right = 110.0
+offset_bottom = -105.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="EnemyCard" parent="UI/EnemyCardAnchor" unique_id=1231489643 instance=ExtResource("6_enemycard")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DialogueBubble" parent="UI" unique_id=1895707352 instance=ExtResource("7_dialogue")]
+visible = false
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -310.0
+offset_top = 64.0
+offset_right = -14.0
+offset_bottom = 126.0
+grow_horizontal = 0
+
+[node name="LoserButton" type="Button" parent="UI" unique_id=659240093]
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -130.0
+offset_top = -155.0
+offset_right = 130.0
+offset_bottom = -103.0
+grow_horizontal = 2
+grow_vertical = 0
+theme = ExtResource("2_vcsgt")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 0.85, 0.85, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_loser_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_loser_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_loser_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_loser_normal")
+text = "I give in..."
+
+[node name="CountdownLabel" type="Label" parent="UI" unique_id=1027781162]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = 60.0
+offset_right = 100.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(100, 50)
+theme_override_colors/font_color = Color(1, 0.2, 0.2, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 72
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TreasureScreen" parent="UI" unique_id=251627827 instance=ExtResource("8_treasure")]
+visible = false
+offset_top = 48.0

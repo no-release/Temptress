@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://chiyy37pq6psv"]
+
+[ext_resource type="Theme" uid="uid://dc2ciocqsob3a" path="res://main_theme.tres" id="1_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.05, 0.04, 0.04, 0.97)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_btn"]
+
+[node name="TreasureScreen" type="PanelContainer" unique_id=670884745]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=820819940]
+layout_mode = 2
+theme_override_constants/margin_left = 80
+theme_override_constants/margin_top = 60
+theme_override_constants/margin_right = 80
+theme_override_constants/margin_bottom = 60
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=759265296]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1148084669]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 32
+text = "- TREASURE -"
+
+[node name="SubtitleLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1508785697]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 13
+text = "You held out and claimed the spoils. Keep going — finish the quest without giving in."
+
+[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer" unique_id=2089269455]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="LootList" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=338382573]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SpringSpacer" type="Control" parent="MarginContainer/VBoxContainer" unique_id=2000692031]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ContinueButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=351240787]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxEmpty_btn")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_btn")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_btn")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_btn")
+text = "Continue"

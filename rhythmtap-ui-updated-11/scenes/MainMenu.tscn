@@ -1,0 +1,102 @@
+[gd_scene format=3 uid="uid://mainmenu"]
+
+[ext_resource type="Script" path="res://scripts/MainMenu.gd" id="1_mm"]
+[ext_resource type="Texture2D" uid="uid://bmqrebqivt2kf" path="res://Gemini_Generated_Image_niki2zniki2zniki.jpg" id="2_2wh52"]
+[ext_resource type="Theme" uid="uid://dc2ciocqsob3a" path="res://main_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.04, 0.03, 0.04, 1)
+
+[node name="MainMenu" type="Control" unique_id=2060277702]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mm")
+
+[node name="Background" type="PanelContainer" parent="." unique_id=1706272340]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="CharacterArt" type="TextureRect" parent="." unique_id=438319905]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_2wh52")
+expand_mode = 3
+
+[node name="ColorRect" type="ColorRect" parent="CharacterArt" unique_id=615916831]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+grow_vertical = 2
+color = Color(0, 0, 0, 0.40784314)
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=34229556]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+theme_override_constants/margin_left = 70
+theme_override_constants/margin_top = 50
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=923150603]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="LogoBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=2047349620]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="LogoDungeonLabel" type="Label" parent="MarginContainer/VBoxContainer/LogoBox" unique_id=201248013]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.44705883, 1, 1)
+theme_override_font_sizes/font_size = 56
+text = "TEMPTRESS"
+
+[node name="LogoUnderline" type="ColorRect" parent="MarginContainer/VBoxContainer/LogoBox" unique_id=2036880170]
+custom_minimum_size = Vector2(360, 2)
+layout_mode = 2
+color = Color(1, 1, 1, 0.85)
+
+[node name="MenuSpacer" type="Control" parent="MarginContainer/VBoxContainer" unique_id=978439231]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+
+[node name="MenuList" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=35526261]
+layout_mode = 2
+theme_override_constants/separation = 36
+
+[node name="Start" type="Button" parent="MarginContainer/VBoxContainer/MenuList" unique_id=1386341737]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "- START -"
+
+[node name="Tutorial" type="Button" parent="MarginContainer/VBoxContainer/MenuList" unique_id=1437036255]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "- TUTORIAL -"
+
+[node name="Album" type="Button" parent="MarginContainer/VBoxContainer/MenuList" unique_id=2064662425]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "- ALBUM -"
+
+[node name="Option" type="Button" parent="MarginContainer/VBoxContainer/MenuList" unique_id=981633009]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "- OPTION -"

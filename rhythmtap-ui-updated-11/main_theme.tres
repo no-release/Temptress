@@ -1,0 +1,25 @@
+[gd_resource type="Theme" format=3 uid="uid://dc2ciocqsob3a"]
+
+[ext_resource type="FontFile" uid="uid://drii402rwb5tl" path="res://ARCADECLASSIC.TTF" id="1_470mv"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_a2l2q"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0omi4"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_58jnp"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_466ly"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_52mx2"]
+
+[resource]
+default_font = ExtResource("1_470mv")
+Button/colors/font_color = Color(1, 0.80334324, 0.9650546, 1)
+Button/colors/font_hover_color = Color(1, 0.6848898, 0.96775526, 1)
+Button/font_sizes/font_size = 24
+Button/styles/disabled = SubResource("StyleBoxEmpty_a2l2q")
+Button/styles/focus = SubResource("StyleBoxEmpty_0omi4")
+Button/styles/hover = SubResource("StyleBoxEmpty_58jnp")
+Button/styles/normal = SubResource("StyleBoxEmpty_466ly")
+Button/styles/pressed = SubResource("StyleBoxEmpty_52mx2")
+Label/fonts/font = ExtResource("1_470mv")

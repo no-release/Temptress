@@ -1,0 +1,151 @@
+[gd_scene format=3 uid="uid://tophud"]
+
+[ext_resource type="Theme" uid="uid://dc2ciocqsob3a" path="res://main_theme.tres" id="1_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar"]
+bg_color = Color(0.03, 0.03, 0.03, 1)
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.12)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hpbg"]
+bg_color = Color(0.22, 0.22, 0.22, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_icon"]
+bg_color = Color(0.18, 0.18, 0.18, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[node name="TopHud" type="PanelContainer" unique_id=2017402477]
+custom_minimum_size = Vector2(0, 48)
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+theme = ExtResource("1_theme")
+theme_override_styles/panel = SubResource("StyleBoxFlat_bar")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1999974970]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=1989909892]
+layout_mode = 2
+alignment = 1
+
+[node name="StageLabel" type="Label" parent="MarginContainer/HBoxContainer" unique_id=1308873364]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "QUEST 1/6"
+
+[node name="SpacerLevel" type="Control" parent="MarginContainer/HBoxContainer" unique_id=1959116610]
+custom_minimum_size = Vector2(14, 0)
+layout_mode = 2
+
+[node name="LevelLabel" type="Label" parent="MarginContainer/HBoxContainer" unique_id=1582417421]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_colors/font_color = Color(0.6, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "LV 1"
+
+[node name="XPLabel" type="Label" parent="MarginContainer/HBoxContainer" unique_id=758103646]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_colors/font_color = Color(0.6, 0.85, 1, 0.75)
+theme_override_font_sizes/font_size = 12
+text = "XP: 0/60"
+
+[node name="Spacer1" type="Control" parent="MarginContainer/HBoxContainer" unique_id=50389253]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HPLabel" type="Label" parent="MarginContainer/HBoxContainer" unique_id=969658256]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "HP: 100/100"
+
+[node name="HPBarBg" type="PanelContainer" parent="MarginContainer/HBoxContainer" unique_id=834078001]
+custom_minimum_size = Vector2(100, 10)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_hpbg")
+
+[node name="HPBarFill" type="ColorRect" parent="MarginContainer/HBoxContainer/HPBarBg" unique_id=2063649897]
+layout_mode = 2
+color = Color(0.85, 0.85, 0.85, 1)
+
+[node name="Spacer2" type="Control" parent="MarginContainer/HBoxContainer" unique_id=196269856]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+
+[node name="AtkLabel" type="Label" parent="MarginContainer/HBoxContainer" unique_id=1814585670]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "ATK: 5"
+
+[node name="Spacer3" type="Control" parent="MarginContainer/HBoxContainer" unique_id=1464911640]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+
+[node name="GoldLabel" type="Label" parent="MarginContainer/HBoxContainer" unique_id=494535260]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.88, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+text = "Gold: 0"
+
+[node name="Icons" type="HBoxContainer" parent="MarginContainer/HBoxContainer" unique_id=20390433]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 2
+
+[node name="BookIcon" type="PanelContainer" parent="MarginContainer/HBoxContainer/Icons" unique_id=1789793137]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_icon")
+
+[node name="BookLabel" type="Label" parent="MarginContainer/HBoxContainer/Icons/BookIcon" unique_id=1309888711]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 14
+text = "■"
+
+[node name="PotionIcon" type="PanelContainer" parent="MarginContainer/HBoxContainer/Icons" unique_id=2069817911]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_icon")
+
+[node name="PotionLabel" type="Label" parent="MarginContainer/HBoxContainer/Icons/PotionIcon" unique_id=2130519164]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 14
+text = "⊛"
+
+[node name="GearIcon" type="PanelContainer" parent="MarginContainer/HBoxContainer/Icons" unique_id=609268808]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_icon")
+
+[node name="GearLabel" type="Label" parent="MarginContainer/HBoxContainer/Icons/GearIcon" unique_id=557246178]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 14
+text = "⚙"

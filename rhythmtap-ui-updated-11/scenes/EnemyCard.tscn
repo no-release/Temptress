@@ -1,0 +1,86 @@
+[gd_scene format=3 uid="uid://enemycard"]
+
+[ext_resource type="Theme" uid="uid://dc2ciocqsob3a" path="res://main_theme.tres" id="1_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.09, 0.06, 0.06, 0.93)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.45, 0.28, 0.28, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hpbg"]
+bg_color = Color(0.22, 0.22, 0.22, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hpfill"]
+bg_color = Color(0.85, 0.85, 0.85, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[node name="EnemyCard" type="PanelContainer" unique_name_in_owner=true]
+custom_minimum_size = Vector2(220, 100)
+theme = ExtResource("1_theme")
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="EnemyNameLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_name_in_owner=true]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+text = "- slime -"
+
+[node name="HPRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="HPLabel" type="Label" parent="MarginContainer/VBoxContainer/HPRow"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(1, 1, 1, 0.7)
+text = "HP:"
+
+[node name="EnemyHPBarBg" type="PanelContainer" parent="MarginContainer/VBoxContainer/HPRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+custom_minimum_size = Vector2(0, 12)
+theme_override_styles/panel = SubResource("StyleBoxFlat_hpbg")
+
+[node name="EnemyHPBarFill" type="ColorRect" parent="MarginContainer/VBoxContainer/HPRow/EnemyHPBarBg" unique_name_in_owner=true]
+layout_mode = 1
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 1.0
+offset_right = 192
+grow_vertical = 2
+color = Color(0.85, 0.85, 0.85, 1)
+
+[node name="EnemyAtkLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_name_in_owner=true]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(1.0, 0.42, 0.42, 1)
+text = "ATK: 10"
