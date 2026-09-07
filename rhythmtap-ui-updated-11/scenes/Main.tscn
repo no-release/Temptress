@@ -144,7 +144,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_loser_normal")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_loser_pressed")
 theme_override_styles/hover = SubResource("StyleBoxFlat_loser_hover")
 theme_override_styles/focus = SubResource("StyleBoxFlat_loser_normal")
-text = "I give in..."
+text = "I can't hold it..."
 
 [node name="CountdownLabel" type="Label" parent="UI" unique_id=1027781162]
 modulate = Color(1, 1, 1, 0)

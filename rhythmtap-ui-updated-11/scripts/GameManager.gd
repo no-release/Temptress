@@ -208,15 +208,42 @@ func _ready():
 	# Beat clock is started by begin_encounter() from Main when the first room fires.
 	# call_deferred("_start") removed in Phase 1 to avoid double-scheduling beats.
 
-## Pull persistent baseline from MetaSave autoload (Phase 1).
+## Pull persistent baseline from MetaSave autoload (Phase 1/2).
 func _apply_meta_stats() -> void:
 	player_level = MetaSave.player_level
 	player_xp = MetaSave.player_xp
 	player_max_health = MetaSave.base_max_health
-	player_health = player_max_health
 	player_damage = MetaSave.base_damage
 	player_gold = 0  # run bag starts empty; banked gold lives on MetaSave
+	_apply_active_run_modifiers()
+	player_health = player_max_health
 	emit_signal("player_stats_changed")
+
+## Fines/curses attached when the quest began (ActiveRun.active_modifiers).
+func _apply_active_run_modifiers() -> void:
+	if ActiveRun.state == null:
+		return
+	for m in ActiveRun.state.active_modifiers:
+		match m.effect:
+			ModifierDef.Effect.HP_PENALTY:
+				player_max_health = maxi(1, int(player_max_health * (1.0 - m.magnitude)))
+			ModifierDef.Effect.ATK_PENALTY:
+				player_damage = maxi(1, int(player_damage * (1.0 - m.magnitude)))
+			ModifierDef.Effect.GOLD_DEBT:
+				player_gold = -int(m.magnitude)
+			ModifierDef.Effect.BPM_PRESSURE:
+				pass
+			_:
+				pass
+
+func _modifier_bpm_bonus() -> float:
+	if ActiveRun.state == null:
+		return 0.0
+	var bonus := 0.0
+	for m in ActiveRun.state.active_modifiers:
+		if m.effect == ModifierDef.Effect.BPM_PRESSURE:
+			bonus += m.magnitude
+	return bonus
 
 ## Start or swap into a combat encounter for the current room.
 func begin_encounter(type_name: String) -> void:
@@ -225,6 +252,7 @@ func begin_encounter(type_name: String) -> void:
 		type_name = "slime_girl"
 	game_state = GameState.PLAYING
 	_initialize_enemy(type_name)
+	current_bpm = active_enemy.base_bpm + _modifier_bpm_bonus()
 	process_turn = Turn.ENEMY
 	generator_last_time = game_time
 	generator_beats_count = 0
@@ -452,8 +480,9 @@ func _level_up():
 func on_player_concedes():
 	if game_state != GameState.SURVIVAL:
 		return
-	var stolen = min(player_gold, active_enemy.gold)
-	player_gold = max(0, player_gold - stolen)
+	# Concede / climax: lose all quest treasure, drain meta via ActiveRun
+	player_gold = 0
+	ActiveRun.mark_conceded()
 	emit_signal("player_stats_changed")
 	game_state            = GameState.PUNISHMENT
 	current_bpm           = PUNISHMENT_BPM

@@ -1,9 +1,8 @@
 extends Node
 # =============================================================================
-# ActiveRun — Phase 1 autoload
+# ActiveRun — Phase 1/2 autoload
 # =============================================================================
-# Holds the in-progress RunState between GuildBoard → Main.
-# Autoload name: ActiveRun
+# Holds the in-progress RunState between GuildBoard → Main → Town.
 # =============================================================================
 
 var state: RunState = null
@@ -45,8 +44,31 @@ func mark_conceded() -> void:
 		return
 	state.conceded = true
 	state.wipe_treasure()
+	# Sensual fail: drain a level and attach a next-run punishment
+	MetaSave.apply_level_drain(1)
+	MetaSave.add_modifier(_roll_fail_modifier())
 	MetaSave.on_quest_conceded()
 	MetaSave.save_to_disk()
+
+func _roll_fail_modifier() -> ModifierDef:
+	var roll := randi() % 4
+	match roll:
+		0:
+			return ModifierDef.make_fine(
+				"guild_fine_gold", ModifierDef.Effect.GOLD_DEBT, 15.0,
+				"Guild Fine", "The receptionist docks your next purse — start 15 gold in debt.")
+		1:
+			return ModifierDef.make_curse(
+				"weakened_resolve", ModifierDef.Effect.HP_PENALTY, 0.15,
+				"Shaken Resolve", "Start the next quest at 15% less max HP.", 1)
+		2:
+			return ModifierDef.make_curse(
+				"heavy_pulse", ModifierDef.Effect.BPM_PRESSURE, 10.0,
+				"Heavy Pulse", "Beats run 10 BPM hotter next quest.", 1)
+		_:
+			return ModifierDef.make_fine(
+				"cold_shoulder", ModifierDef.Effect.RECEPTIONIST_COLD, 1.0,
+				"Cold Shoulder", "The receptionist is especially disappointed.")
 
 func end_run() -> void:
 	state = null
