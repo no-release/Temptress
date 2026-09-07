@@ -10,9 +10,9 @@ extends Control
 const CHARS_PER_SEC := 42.0
 
 @onready var name_label: Label = $Margin/VBox/NameLabel
-@onready var dialogue_label: Label = $Margin/VBox/TextBox/Margin/DialogueLabel
+@onready var dialogue_label: Label = $Margin/VBox/TextBox/Margin/VBox/DialogueLabel
 @onready var text_box: PanelContainer = $Margin/VBox/TextBox
-@onready var continue_hint: Label = $Margin/VBox/TextBox/Margin/ContinueHint
+@onready var continue_hint: Label = $Margin/VBox/TextBox/Margin/VBox/ContinueHint
 
 var _pages: PackedStringArray = []
 var _page_index: int = 0
@@ -60,18 +60,18 @@ func _process(delta: float) -> void:
 		continue_hint.text = "Click to continue…" if _page_index + 1 < _pages.size() else "Click to begin the fight…"
 
 func _on_text_box_gui_input(event: InputEvent) -> void:
+	var clicked := false
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_on_text_clicked()
+		clicked = true
 	elif event is InputEventScreenTouch and event.pressed:
-		_on_text_clicked()
+		clicked = true
+	if not clicked:
+		return
+	accept_event()
+	_on_text_clicked()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_select"):
-		_on_text_clicked()
-		get_viewport().set_input_as_handled()
-
-elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# Allow clicking outside the box too (full-screen advance)
 		_on_text_clicked()
 		get_viewport().set_input_as_handled()
 
