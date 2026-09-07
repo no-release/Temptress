@@ -210,18 +210,9 @@ func _on_room_started(room: Dictionary):
 				# First room (or non-treasure combat): sync encounter to quest enemy
 				game_manager.begin_encounter(enemy)
 		"rest":
-			# Phase 1 stub — tiny heal, then continue so the run never softlocks
-			game_manager.player_health = mini(
-				game_manager.player_max_health,
-				game_manager.player_health + int(game_manager.player_max_health * 0.25))
-			game_manager.emit_signal("player_stats_changed")
-			_show_simple_notice("Rest — recovered some resolve.")
-			await get_tree().create_timer(1.2).timeout
-			room_manager.advance_room()
+			await _run_rest_room()
 		"shop":
-			_show_simple_notice("Shop — (coming soon). Moving on…")
-			await get_tree().create_timer(1.2).timeout
-			room_manager.advance_room()
+			await _run_shop_room()
 
 func _show_simple_notice(text: String) -> void:
 	dialogue_label.text = text
@@ -300,3 +291,99 @@ func _on_game_over(_enemy_name: String):
 	# Fail path already called ActiveRun.mark_conceded in on_player_concedes
 	ActiveRun.end_run()
 	get_tree().change_scene_to_file("res://scenes/Town.tscn")
+
+func _run_rest_room() -> void:
+	var heal := int(game_manager.player_max_health * 0.35)
+	game_manager.player_health = mini(game_manager.player_max_health, game_manager.player_health + heal)
+	game_manager.emit_signal("player_stats_changed")
+	_show_choice_overlay(
+		"- REST -",
+		"You catch your breath. Resolve +%d HP." % heal,
+		"Continue",
+		func(): room_manager.advance_room()
+	)
+	await _overlay_done
+
+func _run_shop_room() -> void:
+	# Cheap mid-run purchases from the quest bag / temporary HP
+	var price := 20
+	var can_buy := game_manager.player_gold >= price
+	var detail := "Travelling merchant.\n20 gold: +8 HP now (from quest bag)."
+	if not can_buy:
+		detail += "\n(You can't afford anything — move on.)"
+	_show_choice_overlay(
+		"- SHOP -",
+		detail,
+		"Buy tonic" if can_buy else "Leave",
+		func():
+			if can_buy and game_manager.player_gold >= price:
+				game_manager.player_gold -= price
+				if ActiveRun.state:
+					ActiveRun.state.treasure_bag_gold = maxi(0, ActiveRun.state.treasure_bag_gold - price)
+				game_manager.player_health = mini(game_manager.player_max_health, game_manager.player_health + 8)
+				game_manager.emit_signal("player_stats_changed")
+			room_manager.advance_room()
+	)
+	# Always offer a leave if buy shown — second button
+	if can_buy and _overlay_secondary:
+		_overlay_secondary.text = "Leave"
+		_overlay_secondary.visible = true
+		if not _overlay_secondary.pressed.is_connected(_on_overlay_leave):
+			_overlay_secondary.pressed.connect(_on_overlay_leave)
+	await _overlay_done
+
+signal _overlay_done
+
+var _overlay_root: Control = null
+var _overlay_secondary: Button = null
+
+func _show_choice_overlay(title: String, body: String, primary: String, on_primary: Callable) -> void:
+	if _overlay_root:
+		_overlay_root.queue_free()
+	_overlay_root = PanelContainer.new()
+	_overlay_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ui_layer.add_child(_overlay_root)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 80)
+	margin.add_theme_constant_override("margin_top", 80)
+	margin.add_theme_constant_override("margin_right", 80)
+	margin.add_theme_constant_override("margin_bottom", 80)
+	_overlay_root.add_child(margin)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	margin.add_child(v)
+	var t := Label.new()
+	t.text = title
+	t.add_theme_font_size_override("font_size", 28)
+	v.add_child(t)
+	var b := Label.new()
+	b.text = body
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(b)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	v.add_child(row)
+	var btn := Button.new()
+	btn.text = primary
+	btn.pressed.connect(func():
+		SoundGen.play_ui_click()
+		_close_overlay()
+		on_primary.call()
+	)
+	row.add_child(btn)
+	_overlay_secondary = Button.new()
+	_overlay_secondary.visible = false
+	row.add_child(_overlay_secondary)
+
+func _on_overlay_leave() -> void:
+	SoundGen.play_ui_click()
+	_close_overlay()
+	room_manager.advance_room()
+
+func _close_overlay() -> void:
+	if _overlay_root:
+		_overlay_root.queue_free()
+		_overlay_root = null
+	_overlay_secondary = null
+	emit_signal("_overlay_done")
+
