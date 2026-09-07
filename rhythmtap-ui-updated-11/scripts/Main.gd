@@ -213,6 +213,7 @@ func _on_room_started(room: Dictionary):
 			else:
 				# First room (or non-treasure combat): sync encounter to quest enemy
 				game_manager.begin_encounter(enemy)
+			MusicDirector.play("combat")
 		"rest":
 			await _run_rest_room()
 		"shop":
@@ -229,6 +230,7 @@ func _on_run_complete():
 	if ActiveRun.state and not ActiveRun.state.conceded:
 		ActiveRun.mark_cleared()
 	ActiveRun.end_run()
+	MusicDirector.stop()
 	get_tree().change_scene_to_file("res://scenes/Town.tscn")
 
 # ── Signal Handlers ───────────────────────────────────────────────────────────
@@ -294,6 +296,7 @@ func _on_game_over(_enemy_name: String):
 	await get_tree().create_timer(4.0).timeout
 	# Fail path already called ActiveRun.mark_conceded in on_player_concedes
 	ActiveRun.end_run()
+	MusicDirector.stop()
 	get_tree().change_scene_to_file("res://scenes/Town.tscn")
 
 
@@ -404,4 +407,3 @@ func _close_overlay() -> void:
 		_overlay_root = null
 	_overlay_secondary = null
 	emit_signal("_overlay_done")
-
