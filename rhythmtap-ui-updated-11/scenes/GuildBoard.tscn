@@ -39,7 +39,7 @@ theme_override_constants/margin_bottom = 50
 
 [node name="VBox" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 14
 
 [node name="Title" type="Label" parent="MarginContainer/VBox"]
 layout_mode = 2
@@ -50,31 +50,11 @@ text = "GUILD BOARD"
 [node name="Subtitle" type="Label" parent="MarginContainer/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-text = "Pick a quest — length, difficulty, biome."
+text = "Rank-scaled contracts — choose an offer."
 
-[node name="LengthLabel" type="Label" parent="MarginContainer/VBox"]
+[node name="Offers" type="VBoxContainer" parent="MarginContainer/VBox"]
 layout_mode = 2
-text = "Length"
-
-[node name="LengthRow" type="HBoxContainer" parent="MarginContainer/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="DiffLabel" type="Label" parent="MarginContainer/VBox"]
-layout_mode = 2
-text = "Difficulty"
-
-[node name="DiffRow" type="HBoxContainer" parent="MarginContainer/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="BiomeLabel" type="Label" parent="MarginContainer/VBox"]
-layout_mode = 2
-text = "Biome"
-
-[node name="BiomeRow" type="HBoxContainer" parent="MarginContainer/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="Summary" type="Label" parent="MarginContainer/VBox"]
 layout_mode = 2
@@ -83,7 +63,7 @@ theme_override_font_sizes/font_size = 16
 text = "…"
 
 [node name="Spacer" type="Control" parent="MarginContainer/VBox"]
-custom_minimum_size = Vector2(0, 20)
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 
 [node name="Accept" type="Button" parent="MarginContainer/VBox"]

@@ -12,6 +12,9 @@ class_name MetaSaveData
 
 const SAVE_PATH := "user://temptress_meta.save"
 
+## Guild rank E→S (ascending difficulty). Shown on Town; drives board offers.
+const GUILD_RANKS := ["E", "D", "C", "B", "A", "S"]
+
 # ── Persistent combat baseline (home upgrades mutate these) ────────────────
 var player_level: int = 1
 var player_xp: int = 0
@@ -34,6 +37,8 @@ var last_outcome: String = ""  # "clear" | "concede" | ""
 var receptionist_contract_signed: bool = false
 ## Enemy ids the player has already seen a first-meet intro for
 var met_enemies: PackedStringArray = PackedStringArray()
+## Phase 11 — public guild rank (E easiest → S hardest)
+var guild_rank: String = "E"
 
 # ── Pending punishments for the NEXT run ───────────────────────────────────
 var pending_modifiers: Array = []  # Array[ModifierDef] (serialize carefully)
@@ -59,6 +64,34 @@ func sign_receptionist_contract() -> void:
 	receptionist_contract_signed = true
 	receptionist_affinity = maxi(receptionist_affinity, 0)
 	emit_signal("meta_changed")
+
+func rank_index(rank: String = "") -> int:
+	var r := rank if rank != "" else guild_rank
+	var idx := GUILD_RANKS.find(r.to_upper())
+	return maxi(0, idx)
+
+func guild_rank_label() -> String:
+	return guild_rank.to_upper()
+
+func try_rank_up() -> bool:
+	var i := rank_index()
+	if i >= GUILD_RANKS.size() - 1:
+		return false
+	guild_rank = GUILD_RANKS[i + 1]
+	emit_signal("meta_changed")
+	return true
+
+func try_rank_down() -> bool:
+	var i := rank_index()
+	if i <= 0:
+		return false
+	guild_rank = GUILD_RANKS[i - 1]
+	emit_signal("meta_changed")
+	return true
+
+func board_offer_count() -> int:
+	# Base 2 offers + board_postings ranks, capped at 4.
+	return clampi(2 + upgrade_rank("board_postings"), 2, 4)
 
 func upgrade_rank(id: String) -> int:
 	var prefix := id + ":"
@@ -103,6 +136,8 @@ func try_buy_upgrade(id: String) -> bool:
 			starting_gold_bonus += int(def["amount"])
 		"survival_cushion":
 			survival_cushion += int(def["amount"])
+		"board_postings", "none", "":
+			pass  # meta-only upgrades (extra quest choices, etc.)
 	save_to_disk()
 	emit_signal("meta_changed")
 	return true
@@ -142,11 +177,15 @@ func consume_modifiers_for_run() -> Array:
 func on_quest_cleared() -> void:
 	last_outcome = "clear"
 	receptionist_affinity = mini(10, receptionist_affinity + 1)
+	try_rank_up()
 	emit_signal("meta_changed")
 
 func on_quest_conceded() -> void:
 	last_outcome = "concede"
 	receptionist_affinity = maxi(-10, receptionist_affinity - 2)
+	# Slight chance to demote guild rank on fold
+	if randf() < 0.35:
+		try_rank_down()
 	emit_signal("meta_changed")
 
 # ── Persistence (simple JSON dictionary — swap for ConfigFile / Resource later)
@@ -165,6 +204,7 @@ func to_dict() -> Dictionary:
 		"last_outcome": last_outcome,
 		"receptionist_contract_signed": receptionist_contract_signed,
 		"met_enemies": Array(met_enemies),
+		"guild_rank": guild_rank,
 		# ModifierDef serialization: Phase 3 — store id + magnitude for now
 		"pending_modifiers": pending_modifiers.map(func(m): return {
 			"id": m.id,
@@ -191,6 +231,8 @@ func from_dict(d: Dictionary) -> void:
 	last_outcome = str(d.get("last_outcome", ""))
 	receptionist_contract_signed = bool(d.get("receptionist_contract_signed", false))
 	met_enemies = PackedStringArray(d.get("met_enemies", []))
+	var loaded_rank := str(d.get("guild_rank", "E")).to_upper()
+	guild_rank = loaded_rank if loaded_rank in GUILD_RANKS else "E"
 	pending_modifiers.clear()
 	for md in d.get("pending_modifiers", []):
 		var m := ModifierDef.new()

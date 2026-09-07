@@ -1,7 +1,7 @@
 extends RefCounted
 class_name UpgradeCatalog
 # =============================================================================
-# UpgradeCatalog — Phase 4
+# UpgradeCatalog — Phase 4 + Phase 11 board postings
 # =============================================================================
 # id -> { name, description, cost, stat, amount, max_rank }
 # =============================================================================
@@ -38,6 +38,15 @@ const UPGRADES := {
 		"stat": "survival_cushion",
 		"amount": 5,
 		"max_rank": 3,
+	},
+	## Phase 11 — extra ranked board choices (base 2 + rank, total offers ≤ 4)
+	"board_postings": {
+		"name": "Extra Board Postings",
+		"description": "+1 quest choice on the guild board (max 4 offers)",
+		"cost": 45,
+		"stat": "board_postings",
+		"amount": 1,
+		"max_rank": 2,
 	},
 }
 
