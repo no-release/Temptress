@@ -82,6 +82,7 @@ func _ready():
 	beat_bar.game_manager   = game_manager
 
 	loser_button.visible = false
+	loser_button.text = "I can't hold it..."
 	loser_button.pressed.connect(_on_loser_pressed)
 	continue_button.pressed.connect(_on_treasure_continue)
 
@@ -229,11 +230,11 @@ func _show_simple_notice(text: String) -> void:
 	dialogue_bubble.modulate = Color(1, 1, 1, 1)
 
 func _on_run_complete():
-	# Bank run treasure into MetaSave, then back to menu (victory UI = Phase 3+)
+	# Bank run treasure into MetaSave, then return to town
 	if ActiveRun.state and not ActiveRun.state.conceded:
 		ActiveRun.mark_cleared()
 	ActiveRun.end_run()
-	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
+	get_tree().change_scene_to_file("res://scenes/Town.tscn")
 
 # ── Signal Handlers ───────────────────────────────────────────────────────────
 func _on_new_beat(beat_num: int):
@@ -296,4 +297,6 @@ func _on_punishment_tick(seconds_left: float):
 func _on_game_over(_enemy_name: String):
 	countdown_label.modulate = Color(1, 1, 1, 0)
 	await get_tree().create_timer(4.0).timeout
-	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
+	# Fail path already called ActiveRun.mark_conceded in on_player_concedes
+	ActiveRun.end_run()
+	get_tree().change_scene_to_file("res://scenes/Town.tscn")
