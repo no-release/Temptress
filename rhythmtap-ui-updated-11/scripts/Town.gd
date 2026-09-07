@@ -1,9 +1,10 @@
 extends Control
 # =============================================================================
-# Town.gd -- Phase 3 town loop + Phase 10 post-run short greetings
+# Town.gd -- Phase 3 town loop + Phase 10 greetings + Phase 11 rank status
 # =============================================================================
 # Hub after clear/concede. Short receptionist lines (affinity / last_outcome).
 # Elaborate first-visit contract moved to ReceptionistBoot (Phase 10).
+# Phase 11: show RANK not affinity; hide pending-punishment spoilers.
 # =============================================================================
 
 @onready var title_label: Label = $Margin/VBox/Title
@@ -58,10 +59,13 @@ func _refresh() -> void:
 		_:
 			receptionist_label.text = NEUTRAL[randi() % NEUTRAL.size()]
 
-	status_label.text = "LV %d · Banked gold: %d · Affinity: %d" % [
-		MetaSave.player_level, MetaSave.banked_gold, affinity
+	# Phase 11: public status shows RANK, not affinity
+	status_label.text = "LV %d · Banked gold: %d · RANK %s" % [
+		MetaSave.player_level, MetaSave.banked_gold, MetaSave.guild_rank_label()
 	]
-	modifiers_label.text = _format_modifiers()
+	# Phase 11: do not spoil pending next-run punishments (still applied secretly)
+	modifiers_label.text = ""
+	modifiers_label.visible = false
 	var fine_cost := _gold_debt_total()
 	pay_button.visible = fine_cost > 0
 	pay_button.text = "- PAY GUILD FINE (%d gold) -" % fine_cost
@@ -73,14 +77,6 @@ func _gold_debt_total() -> int:
 		if m.effect == ModifierDef.Effect.GOLD_DEBT:
 			total += int(m.magnitude)
 	return total
-
-func _format_modifiers() -> String:
-	if MetaSave.pending_modifiers.is_empty():
-		return "No active fines or curses."
-	var lines: PackedStringArray = PackedStringArray(["Pending next-run punishments:"])
-	for m in MetaSave.pending_modifiers:
-		lines.append("- %s -- %s" % [m.display_name, m.description])
-	return "\n".join(lines)
 
 func _on_pay_fine() -> void:
 	SoundGen.play_ui_click()

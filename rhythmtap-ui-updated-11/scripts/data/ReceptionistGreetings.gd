@@ -1,7 +1,7 @@
 extends RefCounted
 class_name ReceptionistGreetings
 # =============================================================================
-# ReceptionistGreetings -- Phase 10 boot return lines
+# ReceptionistGreetings -- Phase 10 boot return lines + Phase 11 light rank
 # =============================================================================
 # Performance-aware greeting pages for ReceptionistBoot after the contract is
 # signed. Contract pages stay on FirstMeetScenes.receptionist_pages().
@@ -63,4 +63,16 @@ static func return_pages(outcome: String, affinity: int) -> PackedStringArray:
 		pages.append("Receptionist: ...She barely looks at you. Just points at the board.")
 	elif outcome == "clear" and affinity >= 4:
 		pages.append("Receptionist: (A rare almost-smile.) Do not waste that goodwill.")
+	# Phase 11: light rank mention (does not spoil punishments)
+	var rank := MetaSave.guild_rank_label()
+	if randf() < 0.55:
+		match rank:
+			"E", "D":
+				pages.append("Receptionist: Rank %s postings are up. Nothing too cruel — yet." % rank)
+			"C", "B":
+				pages.append("Receptionist: Rank %s. The board expects more of you now." % rank)
+			"A", "S":
+				pages.append("Receptionist: Rank %s contracts. Try not to embarrass the guild." % rank)
+			_:
+				pages.append("Receptionist: Your rank is posted. Check the board.")
 	return pages

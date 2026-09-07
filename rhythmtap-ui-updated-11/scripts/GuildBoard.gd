@@ -1,98 +1,101 @@
 extends Control
 # =============================================================================
-# GuildBoard.gd — Phase 1
+# GuildBoard.gd — Phase 11 ranked board offers
 # =============================================================================
-# Simple guild quest picker: length, difficulty, biome → builds ActiveRun → Main.
+# No free pick of length/difficulty/biome. Generates N quest offers scaled to
+# MetaSave.guild_rank (E easier → S harder). Player picks one of 2–4 cards.
+# N = 2 + board_postings upgrade (capped at 4).
 # =============================================================================
 
 @onready var title_label: Label = $MarginContainer/VBox/Title
-@onready var length_row: HBoxContainer = $MarginContainer/VBox/LengthRow
-@onready var diff_row: HBoxContainer = $MarginContainer/VBox/DiffRow
-@onready var biome_row: HBoxContainer = $MarginContainer/VBox/BiomeRow
+@onready var subtitle_label: Label = $MarginContainer/VBox/Subtitle
+@onready var offers_box: VBoxContainer = $MarginContainer/VBox/Offers
 @onready var summary_label: Label = $MarginContainer/VBox/Summary
 @onready var accept_button: Button = $MarginContainer/VBox/Accept
 @onready var back_button: Button = $MarginContainer/VBox/Back
 
-var _length: int = QuestDef.Length.SHORT
-var _difficulty: int = QuestDef.Difficulty.NORMAL
-var _biome: String = "dungeon"
-
-const BIOMES := ["dungeon", "forest", "swamp", "volcanic", "palace"]
+var _offers: Array = []  # Array[QuestDef]
+var _selected: int = 0
+var _offer_buttons: Array = []  # Array[Button]
 
 func _ready() -> void:
-	_build_option_buttons(length_row, [
-		["Short", QuestDef.Length.SHORT],
-		["Medium", QuestDef.Length.MEDIUM],
-		["Long", QuestDef.Length.LONG],
-	], "_on_length")
-	_build_option_buttons(diff_row, [
-		["Easy", QuestDef.Difficulty.EASY],
-		["Normal", QuestDef.Difficulty.NORMAL],
-		["Hard", QuestDef.Difficulty.HARD],
-		["Nightmare", QuestDef.Difficulty.NIGHTMARE],
-	], "_on_diff")
-	var biome_opts: Array = []
-	for b in BIOMES:
-		# Only offer unlocked biomes when MetaSave has them; fallback all.
-		if MetaSave.unlocked_biomes.is_empty() or b in MetaSave.unlocked_biomes or b == "dungeon":
-			biome_opts.append([b.capitalize(), b])
-	if biome_opts.is_empty():
-		biome_opts.append(["Dungeon", "dungeon"])
-	_build_biome_buttons(biome_row, biome_opts)
 	accept_button.pressed.connect(_on_accept)
 	back_button.pressed.connect(_on_back)
+	_regen_offers()
+
+func _regen_offers() -> void:
+	_offers = QuestGenerator.generate_offers()
+	_selected = 0
+	subtitle_label.text = "Rank %s contracts — pick one offer." % MetaSave.guild_rank_label()
+	_rebuild_offer_buttons()
 	_refresh_summary()
 
-func _build_option_buttons(row: HBoxContainer, opts: Array, method: String) -> void:
-	for child in row.get_children():
+func _rebuild_offer_buttons() -> void:
+	for child in offers_box.get_children():
 		child.queue_free()
-	for opt in opts:
+	_offer_buttons.clear()
+	for i in range(_offers.size()):
+		var q: QuestDef = _offers[i]
 		var btn := Button.new()
-		btn.text = str(opt[0])
-		btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		var value = opt[1]
-		btn.pressed.connect(func(): call(method, value))
-		row.add_child(btn)
+		btn.text = _card_text(q, i)
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		var idx := i
+		btn.pressed.connect(func(): _on_select(idx))
+		offers_box.add_child(btn)
+		_offer_buttons.append(btn)
+	_highlight_selected()
 
-func _build_biome_buttons(row: HBoxContainer, opts: Array) -> void:
-	for child in row.get_children():
-		child.queue_free()
-	for opt in opts:
-		var btn := Button.new()
-		btn.text = str(opt[0])
-		btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		var value: String = str(opt[1])
-		btn.pressed.connect(func(): _on_biome(value))
-		row.add_child(btn)
+func _card_text(q: QuestDef, index: int) -> String:
+	return "[%d] %s\n%s · %s · %d rooms · gold x%.2f · XP x%.2f · tiers %d–%d" % [
+		index + 1,
+		q.display_name,
+		q.biome.capitalize(),
+		QuestDef.difficulty_label(q.difficulty),
+		q.combat_room_count,
+		q.gold_multiplier,
+		q.xp_multiplier,
+		q.min_enemy_tier,
+		q.max_enemy_tier,
+	]
 
-func _on_length(v: int) -> void:
+func _on_select(index: int) -> void:
 	SoundGen.play_ui_click()
-	_length = v
+	_selected = clampi(index, 0, maxi(0, _offers.size() - 1))
+	_highlight_selected()
 	_refresh_summary()
 
-func _on_diff(v: int) -> void:
-	SoundGen.play_ui_click()
-	_difficulty = v
-	_refresh_summary()
-
-func _on_biome(v: String) -> void:
-	SoundGen.play_ui_click()
-	_biome = v
-	_refresh_summary()
+func _highlight_selected() -> void:
+	for i in range(_offer_buttons.size()):
+		var btn: Button = _offer_buttons[i]
+		if not is_instance_valid(btn):
+			continue
+		if i == _selected:
+			btn.modulate = Color(1.0, 0.75, 1.0, 1.0)
+		else:
+			btn.modulate = Color(1, 1, 1, 1)
 
 func _refresh_summary() -> void:
-	var q := QuestDef.from_board(_length, _difficulty, _biome)
-	summary_label.text = "%s\n%d combat rooms · gold x%.2f · XP x%.2f · tiers %d–%d" % [
+	if _offers.is_empty():
+		summary_label.text = "No contracts posted."
+		accept_button.disabled = true
+		return
+	accept_button.disabled = false
+	var q: QuestDef = _offers[_selected]
+	summary_label.text = "Selected: %s\n%d combat rooms · gold x%.2f · XP x%.2f · tiers %d–%d" % [
 		q.display_name, q.combat_room_count, q.gold_multiplier, q.xp_multiplier,
 		q.min_enemy_tier, q.max_enemy_tier
 	]
 
 func _on_accept() -> void:
+	if _offers.is_empty():
+		return
 	SoundGen.play_ui_click()
-	var q := QuestDef.from_board(_length, _difficulty, _biome)
+	var q: QuestDef = _offers[_selected]
 	ActiveRun.begin_quest(q)
 	get_tree().change_scene_to_file("res://scenes/Main.tscn")
 
 func _on_back() -> void:
 	SoundGen.play_ui_click()
-	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
+	# Hub is Town (redirects to ReceptionistBoot if contract unsigned)
+	get_tree().change_scene_to_file("res://scenes/Town.tscn")
