@@ -202,8 +202,37 @@ signal game_over(enemy_name: String)
 # ── Boot ──────────────────────────────────────────────────────────────────────
 func _ready():
 	_build_enemies()
-	_initialize_enemy("slime_girl")   # first enemy; RoomManager will take over after
-	call_deferred("_start")           # deferred so Main.gd's _ready runs first
+	_apply_meta_stats()
+	# Placeholder enemy until Main / RoomManager calls begin_encounter()
+	_initialize_enemy("slime_girl")
+	# Beat clock is started by begin_encounter() from Main when the first room fires.
+	# call_deferred("_start") removed in Phase 1 to avoid double-scheduling beats.
+
+## Pull persistent baseline from MetaSave autoload (Phase 1).
+func _apply_meta_stats() -> void:
+	player_level = MetaSave.player_level
+	player_xp = MetaSave.player_xp
+	player_max_health = MetaSave.base_max_health
+	player_health = player_max_health
+	player_damage = MetaSave.base_damage
+	player_gold = 0  # run bag starts empty; banked gold lives on MetaSave
+	emit_signal("player_stats_changed")
+
+## Start or swap into a combat encounter for the current room.
+func begin_encounter(type_name: String) -> void:
+	if not ENEMY_DATA.has(type_name):
+		push_warning("GameManager.begin_encounter: unknown enemy %s" % type_name)
+		type_name = "slime_girl"
+	game_state = GameState.PLAYING
+	_initialize_enemy(type_name)
+	process_turn = Turn.ENEMY
+	generator_last_time = game_time
+	generator_beats_count = 0
+	generator_turn = Turn.ENEMY
+	beat_times.clear()
+	_fill_beat_buffer()
+	emit_signal("player_stats_changed")
+	emit_signal("enemy_hp_changed")
 
 func _start():
 	game_time           = 0.0
@@ -378,7 +407,12 @@ func _on_survival_success():
 # with the next enemy type when the player dismisses the treasure screen.
 func _on_enemy_defeated():
 	player_gold += active_enemy.gold
+	# Run-only treasure bag (Phase 1) — banked on quest clear via ActiveRun.mark_cleared
+	ActiveRun.add_run_gold(active_enemy.gold)
 	player_xp   += active_enemy.xp
+	# Keep MetaSave XP/level in sync for mid-run level-ups
+	MetaSave.player_xp = player_xp
+	MetaSave.player_level = player_level
 	emit_signal("player_stats_changed")
 	while player_xp >= xp_to_next_level():
 		player_xp -= xp_to_next_level()
@@ -405,6 +439,11 @@ func _level_up():
 	player_max_health  = int(player_max_health * 1.25)
 	player_damage      = int(player_damage     * 1.20)
 	player_health      = player_max_health
+	MetaSave.player_level = player_level
+	MetaSave.player_xp = player_xp
+	MetaSave.base_max_health = player_max_health
+	MetaSave.base_damage = player_damage
+	MetaSave.save_to_disk()
 	emit_signal("player_stats_changed")
 
 # ── Concede ───────────────────────────────────────────────────────────────────

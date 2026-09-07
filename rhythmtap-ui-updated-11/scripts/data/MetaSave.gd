@@ -33,6 +33,9 @@ var pending_modifiers: Array = []  # Array[ModifierDef] (serialize carefully)
 
 signal meta_changed()
 
+func _ready() -> void:
+	load_from_disk()
+
 func xp_to_next_level() -> int:
 	return 60 * player_level
 

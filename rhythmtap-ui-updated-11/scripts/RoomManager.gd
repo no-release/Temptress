@@ -1,26 +1,14 @@
 extends Node
 # =============================================================================
-# RoomManager.gd — ALPHA BUILD
+# RoomManager.gd — ALPHA BUILD / Phase 1
 # =============================================================================
-# Sequences the player through a "run" — an ordered list of rooms.
-# Inspired by Slay the Spire: each room is a dictionary with a "type" and
-# whatever data that type needs. Main.gd listens to room_started and routes
-# to the appropriate system (GameManager for combat, future scenes for others).
-#
-# CURRENT ROOM TYPES:
-#   { "type": "combat", "enemy": "slime_girl" }  — wires into GameManager
-#   { "type": "rest"  }                          — stub, not yet implemented
-#   { "type": "shop"  }                          — stub, not yet implemented
-#
-# Enemy order is weak → strong so early rooms feel approachable and later
-# rooms ramp difficulty. This is the temporary stand-in for the future
-# guild-quest system (player picks length/difficulty/biome).
+# Sequences the player through a run. Phase 1: prefers ActiveRun.room_list()
+# from the guild board; falls back to DEFAULT_RUN if none.
 # =============================================================================
 
-signal room_started(room: Dictionary)  # Main.gd listens to this
-signal run_complete()                  # all rooms cleared; Main.gd handles victory
+signal room_started(room: Dictionary)
+signal run_complete()
 
-# Ordered by escalating difficulty. Edit freely.
 const DEFAULT_RUN: Array = [
 	{ "type": "combat", "enemy": "slime_girl"  },
 	{ "type": "combat", "enemy": "goblin_girl" },
@@ -36,13 +24,21 @@ var _current_index: int   = -1
 var current_room: Dictionary:
 	get: return _rooms[_current_index] if _current_index >= 0 else {}
 
-func start_run(run_def: Array = DEFAULT_RUN):
+func start_run(run_def: Array = []):
+	if run_def.is_empty() and ActiveRun.has_run():
+		run_def = ActiveRun.room_list()
+	if run_def.is_empty():
+		run_def = DEFAULT_RUN
 	_rooms         = run_def.duplicate(true)
 	_current_index = -1
+	if ActiveRun.state:
+		ActiveRun.state.rooms = _rooms.duplicate(true)
 	advance_room()
 
 func advance_room():
 	_current_index += 1
+	if ActiveRun.state:
+		ActiveRun.state.room_index = _current_index
 	if _current_index >= _rooms.size():
 		emit_signal("run_complete")
 		return

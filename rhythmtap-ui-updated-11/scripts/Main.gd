@@ -108,7 +108,7 @@ func _ready():
 	# Deferred so Godot's layout pass runs first and size.x values are real
 	call_deferred("_update_all_hud")
 
-	# RoomManager drives the run; first room_started fires here
+	# RoomManager drives the run from ActiveRun (guild quest) when present
 	room_manager.start_run()
 
 # ── HUD Update ────────────────────────────────────────────────────────────────
@@ -172,6 +172,12 @@ func _show_treasure_screen(gold_reward: int):
 	row.add_theme_font_size_override("font_size", 18)
 	row.add_theme_color_override("font_color", Color(1.0, 0.88, 0.2, 1))
 	loot_list.add_child(row)
+	if ActiveRun.state:
+		var bag = Label.new()
+		bag.text = "Quest bag: %d Gold" % ActiveRun.state.treasure_bag_gold
+		bag.add_theme_font_size_override("font_size", 14)
+		bag.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
+		loot_list.add_child(bag)
 	var sep = HSeparator.new()
 	sep.add_theme_color_override("color", Color(1.0, 0.88, 0.2, 0.55))
 	loot_list.add_child(sep)
@@ -180,11 +186,8 @@ func _show_treasure_screen(gold_reward: int):
 func _on_treasure_continue():
 	SoundGen.play_ui_click()
 	treasure_screen.visible = false
-	if room_manager.has_next_room():
-		room_manager.advance_room()
-	else:
-		# run_complete is emitted by RoomManager when no rooms remain
-		pass
+	# Always advance — past the last room this emits run_complete
+	room_manager.advance_room()
 
 # ── Room Routing ──────────────────────────────────────────────────────────────
 # RoomManager emits room_started with the room dict; we dispatch here.
@@ -192,21 +195,44 @@ func _on_treasure_continue():
 func _on_room_started(room: Dictionary):
 	var room_num = room_manager.get_room_number()
 	var total    = room_manager.get_total_rooms()
-	stage_label.text = "QUEST %d/%d" % [room_num, total]
+	if ActiveRun.state and ActiveRun.state.quest:
+		stage_label.text = ActiveRun.state.quest_progress_label()
+	else:
+		stage_label.text = "QUEST %d/%d" % [room_num, total]
 
 	match room.get("type", ""):
 		"combat":
 			var enemy = room.get("enemy", "slime_girl")
 			if game_manager.game_state == game_manager.GameState.TREASURE:
 				game_manager.continue_after_treasure(enemy)
-			# else: first room, GameManager already initialised in _ready
+			else:
+				# First room (or non-treasure combat): sync encounter to quest enemy
+				game_manager.begin_encounter(enemy)
 		"rest":
-			pass  # TODO: show rest room UI — heal, maybe a dialogue scene
+			# Phase 1 stub — tiny heal, then continue so the run never softlocks
+			game_manager.player_health = mini(
+				game_manager.player_max_health,
+				game_manager.player_health + int(game_manager.player_max_health * 0.25))
+			game_manager.emit_signal("player_stats_changed")
+			_show_simple_notice("Rest — recovered some resolve.")
+			await get_tree().create_timer(1.2).timeout
+			room_manager.advance_room()
 		"shop":
-			pass  # TODO: show shop UI — spend gold on upgrades/items
+			_show_simple_notice("Shop — (coming soon). Moving on…")
+			await get_tree().create_timer(1.2).timeout
+			room_manager.advance_room()
+
+func _show_simple_notice(text: String) -> void:
+	dialogue_label.text = text
+	_dialogue_timer = 1.5
+	dialogue_bubble.visible = true
+	dialogue_bubble.modulate = Color(1, 1, 1, 1)
 
 func _on_run_complete():
-	# TODO: victory screen. For now just return to menu.
+	# Bank run treasure into MetaSave, then back to menu (victory UI = Phase 3+)
+	if ActiveRun.state and not ActiveRun.state.conceded:
+		ActiveRun.mark_cleared()
+	ActiveRun.end_run()
 	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
 
 # ── Signal Handlers ───────────────────────────────────────────────────────────
