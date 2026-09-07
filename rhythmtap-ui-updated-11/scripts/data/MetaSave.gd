@@ -12,26 +12,30 @@ class_name MetaSaveData
 
 const SAVE_PATH := "user://temptress_meta.save"
 
-# ── Persistent combat baseline (home upgrades mutate these) ───────────────────
+# ── Persistent combat baseline (home upgrades mutate these) ────────────────
 var player_level: int = 1
 var player_xp: int = 0
 var base_max_health: int = 30
 var base_damage: int = 10
 var banked_gold: int = 0
 
-# ── Progression / unlocks ─────────────────────────────────────────────────────
+# ── Progression / unlocks ──────────────────────────────────────────────────
 var unlocked_biomes: PackedStringArray = PackedStringArray(["dungeon"])
 var unlocked_upgrades: PackedStringArray = PackedStringArray()
 ## upgrade_id -> rank stored as "id:rank" entries in unlocked_upgrades
 var starting_gold_bonus: int = 0
 var survival_cushion: int = 0
 
-# ── Town / receptionist ───────────────────────────────────────────────────────
+# ── Town / receptionist ────────────────────────────────────────────────────
 ## Soft affinity: negative after fails, recovers on clears. Drives dialogue.
 var receptionist_affinity: int = 0
 var last_outcome: String = ""  # "clear" | "concede" | ""
+## Phase 6 — first-visit contract signing
+var receptionist_contract_signed: bool = false
+## Enemy ids the player has already seen a first-meet intro for
+var met_enemies: PackedStringArray = PackedStringArray()
 
-# ── Pending punishments for the NEXT run ──────────────────────────────────────
+# ── Pending punishments for the NEXT run ───────────────────────────────────
 var pending_modifiers: Array = []  # Array[ModifierDef] (serialize carefully)
 
 signal meta_changed()
@@ -41,6 +45,20 @@ func _ready() -> void:
 
 func xp_to_next_level() -> int:
 	return 60 * player_level
+
+func has_met_enemy(enemy_id: String) -> bool:
+	return enemy_id in met_enemies
+
+func mark_enemy_met(enemy_id: String) -> void:
+	if enemy_id == "" or enemy_id in met_enemies:
+		return
+	met_enemies.append(enemy_id)
+	emit_signal("meta_changed")
+
+func sign_receptionist_contract() -> void:
+	receptionist_contract_signed = true
+	receptionist_affinity = maxi(receptionist_affinity, 0)
+	emit_signal("meta_changed")
 
 func upgrade_rank(id: String) -> int:
 	var prefix := id + ":"
@@ -145,6 +163,8 @@ func to_dict() -> Dictionary:
 		"survival_cushion": survival_cushion,
 		"receptionist_affinity": receptionist_affinity,
 		"last_outcome": last_outcome,
+		"receptionist_contract_signed": receptionist_contract_signed,
+		"met_enemies": Array(met_enemies),
 		# ModifierDef serialization: Phase 3 — store id + magnitude for now
 		"pending_modifiers": pending_modifiers.map(func(m): return {
 			"id": m.id,
@@ -169,6 +189,8 @@ func from_dict(d: Dictionary) -> void:
 	survival_cushion = int(d.get("survival_cushion", 0))
 	receptionist_affinity = int(d.get("receptionist_affinity", 0))
 	last_outcome = str(d.get("last_outcome", ""))
+	receptionist_contract_signed = bool(d.get("receptionist_contract_signed", false))
+	met_enemies = PackedStringArray(d.get("met_enemies", []))
 	pending_modifiers.clear()
 	for md in d.get("pending_modifiers", []):
 		var m := ModifierDef.new()

@@ -1,9 +1,9 @@
 extends Control
 # =============================================================================
-# Town.gd — Phase 3 town loop
+# Town.gd — Phase 3 town loop + Phase 6 receptionist contract intro
 # =============================================================================
 # Hub after clear/concede. Receptionist dialogue pools, optional pay-off of fines,
-# routes to Guild / Home / Title.
+# routes to Guild / Home / Title. First visit plays a multi-page contract signing.
 # =============================================================================
 
 @onready var title_label: Label = $Margin/VBox/Title
@@ -14,6 +14,9 @@ extends Control
 @onready var home_button: Button = $Margin/VBox/HomeButton
 @onready var pay_button: Button = $Margin/VBox/PayButton
 @onready var menu_button: Button = $Margin/VBox/MenuButton
+
+var _contract_page: int = 0
+var _advance_button: Button = null
 
 const DISAPPOINTED := [
 	"Receptionist: \"You failed your quest. I expected better — there will be consequences.\"",
@@ -37,7 +40,54 @@ func _ready() -> void:
 	home_button.pressed.connect(_on_home)
 	pay_button.pressed.connect(_on_pay_fine)
 	menu_button.pressed.connect(_on_menu)
-	_refresh()
+	if not MetaSave.receptionist_contract_signed:
+		_start_contract_intro()
+	else:
+		_refresh()
+
+func _set_hub_buttons_visible(vis: bool) -> void:
+	guild_button.visible = vis
+	home_button.visible = vis
+	menu_button.visible = vis
+	# pay_button visibility is outcome-driven in _refresh
+
+func _start_contract_intro() -> void:
+	_contract_page = 0
+	_set_hub_buttons_visible(false)
+	pay_button.visible = false
+	status_label.text = "Guild induction"
+	modifiers_label.text = "Read carefully. You sign with your eyes open."
+	if _advance_button == null:
+		_advance_button = Button.new()
+		_advance_button.name = "ContractAdvance"
+		$Margin/VBox.add_child(_advance_button)
+		_advance_button.pressed.connect(_on_contract_advance)
+	_advance_button.visible = true
+	_show_contract_page()
+
+func _show_contract_page() -> void:
+	var pages := FirstMeetScenes.receptionist_pages()
+	var last := _contract_page >= pages.size() - 1
+	receptionist_label.text = pages[_contract_page]
+	if last:
+		_advance_button.text = "- SIGN THE CONTRACT -"
+	else:
+		_advance_button.text = "- CONTINUE - (%d/%d)" % [_contract_page + 1, pages.size()]
+
+func _on_contract_advance() -> void:
+	SoundGen.play_ui_click()
+	var pages := FirstMeetScenes.receptionist_pages()
+	if _contract_page >= pages.size() - 1:
+		MetaSave.sign_receptionist_contract()
+		MetaSave.save_to_disk()
+		if _advance_button:
+			_advance_button.visible = false
+		_set_hub_buttons_visible(true)
+		receptionist_label.text = "Receptionist: \"Ink's dry. Don't embarrass me on your first outing.\""
+		_refresh()
+		return
+	_contract_page += 1
+	_show_contract_page()
 
 func _refresh() -> void:
 	var affinity := MetaSave.receptionist_affinity
