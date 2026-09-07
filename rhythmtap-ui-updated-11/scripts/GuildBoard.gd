@@ -1,10 +1,12 @@
 extends Control
 # =============================================================================
-# GuildBoard.gd — Phase 11 ranked board offers
+# GuildBoard.gd — Phase 11 ranked board + Phase 13 persisted offers
 # =============================================================================
-# No free pick of length/difficulty/biome. Generates N quest offers scaled to
+# No free pick of length/difficulty/biome. Shows N quest offers scaled to
 # MetaSave.guild_rank (E easier → S harder). Player picks one of 2–4 cards.
 # N = 2 + board_postings upgrade (capped at 4).
+# Phase 13: offers load from MetaSave (no reboot reroll); accept refreshes
+# leftover slots with fresh unique contracts.
 # =============================================================================
 
 @onready var title_label: Label = $MarginContainer/VBox/Title
@@ -21,10 +23,10 @@ var _offer_buttons: Array = []  # Array[Button]
 func _ready() -> void:
 	accept_button.pressed.connect(_on_accept)
 	back_button.pressed.connect(_on_back)
-	_regen_offers()
+	_load_offers()
 
-func _regen_offers() -> void:
-	_offers = QuestGenerator.generate_offers()
+func _load_offers() -> void:
+	_offers = BoardOfferPersist.ensure_offers()
 	_selected = 0
 	subtitle_label.text = "Rank %s contracts — pick one offer." % MetaSave.guild_rank_label()
 	_rebuild_offer_buttons()
@@ -91,7 +93,9 @@ func _on_accept() -> void:
 	if _offers.is_empty():
 		return
 	SoundGen.play_ui_click()
-	var q: QuestDef = _offers[_selected]
+	var q: QuestDef = BoardOfferPersist.accept_and_refresh(_selected)
+	if q == null:
+		return
 	ActiveRun.begin_quest(q)
 	get_tree().change_scene_to_file("res://scenes/Main.tscn")
 

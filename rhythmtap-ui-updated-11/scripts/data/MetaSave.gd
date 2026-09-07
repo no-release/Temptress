@@ -41,6 +41,8 @@ var met_enemies: PackedStringArray = PackedStringArray()
 var guild_rank: String = "E"
 ## Phase 12 — last contest vs each enemy: enemy_id -> "won" | "lost"
 var enemy_last_result: Dictionary = {}
+## Phase 13 — current guild board quest offers (Array[Dictionary] QuestDef fields)
+var board_offers: Array = []
 
 # ── Pending punishments for the NEXT run ───────────────────────────────────
 var pending_modifiers: Array = []  # Array[ModifierDef] (serialize carefully)
@@ -140,7 +142,8 @@ func try_buy_upgrade(id: String) -> bool:
 	banked_gold -= cost
 	rank += 1
 	set_upgrade_rank(id, rank)
-	match String(def["stat"]):
+	var stat := String(def["stat"])
+	match stat:
 		"base_max_health":
 			base_max_health += int(def["amount"])
 		"base_damage":
@@ -151,7 +154,11 @@ func try_buy_upgrade(id: String) -> bool:
 			survival_cushion += int(def["amount"])
 		"board_postings", "none", "":
 			pass  # meta-only upgrades (extra quest choices, etc.)
-	save_to_disk()
+	# Phase 13: buying board_postings immediately fills the new empty offer slot
+	if stat == "board_postings":
+		BoardOfferPersist.fill_new_slots()
+	else:
+		save_to_disk()
 	emit_signal("meta_changed")
 	return true
 
@@ -219,6 +226,7 @@ func to_dict() -> Dictionary:
 		"met_enemies": Array(met_enemies),
 		"guild_rank": guild_rank,
 		"enemy_last_result": enemy_last_result.duplicate(),
+		"board_offers": board_offers.duplicate(true),
 		# ModifierDef serialization: Phase 3 — store id + magnitude for now
 		"pending_modifiers": pending_modifiers.map(func(m): return {
 			"id": m.id,
@@ -254,6 +262,12 @@ func from_dict(d: Dictionary) -> void:
 			var v := str(elr[k])
 			if v in ["won", "lost"]:
 				enemy_last_result[str(k)] = v
+	board_offers.clear()
+	var bo = d.get("board_offers", [])
+	if typeof(bo) == TYPE_ARRAY:
+		for item in bo:
+			if typeof(item) == TYPE_DICTIONARY:
+				board_offers.append((item as Dictionary).duplicate(true))
 	pending_modifiers.clear()
 	for md in d.get("pending_modifiers", []):
 		var m := ModifierDef.new()
