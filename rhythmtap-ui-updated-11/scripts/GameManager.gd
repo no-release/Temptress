@@ -214,7 +214,7 @@ func _apply_meta_stats() -> void:
 	player_xp = MetaSave.player_xp
 	player_max_health = MetaSave.base_max_health
 	player_damage = MetaSave.base_damage
-	player_gold = 0  # run bag starts empty; banked gold lives on MetaSave
+	player_gold = MetaSave.starting_gold_bonus  # run bag starts with home purse upgrades
 	_apply_active_run_modifiers()
 	player_health = player_max_health
 	emit_signal("player_stats_changed")
@@ -402,7 +402,7 @@ func _end_of_turn(turn_that_just_ended: int):
 # on_player_concedes(). If they survive they keep everything.
 func _on_player_defeated():
 	game_state            = GameState.SURVIVAL
-	survival_beats_left   = SURVIVAL_BEATS_REQUIRED
+	survival_beats_left   = SURVIVAL_BEATS_REQUIRED + MetaSave.survival_cushion
 	current_bpm           = SURVIVAL_BPM
 	beat_times.clear()
 	generator_last_time   = game_time

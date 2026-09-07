@@ -35,10 +35,11 @@ grow_vertical = 2
 theme_override_constants/margin_left = 70
 theme_override_constants/margin_top = 50
 theme_override_constants/margin_right = 70
+theme_override_constants/margin_bottom = 40
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 16
 
 [node name="Title" type="Label" parent="Margin/VBox"]
 layout_mode = 2
@@ -50,6 +51,10 @@ text = "HOME"
 layout_mode = 2
 autowrap_mode = 3
 text = "…"
+
+[node name="UpgradeList" type="VBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
 
 [node name="Back" type="Button" parent="Margin/VBox"]
 layout_mode = 2

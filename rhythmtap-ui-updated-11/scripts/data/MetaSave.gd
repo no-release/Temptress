@@ -22,6 +22,9 @@ var banked_gold: int = 0
 # ── Progression / unlocks ─────────────────────────────────────────────────────
 var unlocked_biomes: PackedStringArray = PackedStringArray(["dungeon"])
 var unlocked_upgrades: PackedStringArray = PackedStringArray()
+## upgrade_id -> rank stored as "id:rank" entries in unlocked_upgrades
+var starting_gold_bonus: int = 0
+var survival_cushion: int = 0
 
 # ── Town / receptionist ───────────────────────────────────────────────────────
 ## Soft affinity: negative after fails, recovers on clears. Drives dialogue.
@@ -38,6 +41,53 @@ func _ready() -> void:
 
 func xp_to_next_level() -> int:
 	return 60 * player_level
+
+func upgrade_rank(id: String) -> int:
+	var prefix := id + ":"
+	for entry in unlocked_upgrades:
+		if String(entry).begins_with(prefix):
+			return int(String(entry).substr(prefix.length()))
+		if String(entry) == id:
+			return 1
+	return 0
+
+func set_upgrade_rank(id: String, rank: int) -> void:
+	var prefix := id + ":"
+	var next := PackedStringArray()
+	for entry in unlocked_upgrades:
+		if String(entry).begins_with(prefix) or String(entry) == id:
+			continue
+		next.append(entry)
+	if rank > 0:
+		next.append("%s:%d" % [id, rank])
+	unlocked_upgrades = next
+	emit_signal("meta_changed")
+
+func try_buy_upgrade(id: String) -> bool:
+	if not UpgradeCatalog.UPGRADES.has(id):
+		return false
+	var def: Dictionary = UpgradeCatalog.UPGRADES[id]
+	var rank := upgrade_rank(id)
+	if rank >= int(def["max_rank"]):
+		return false
+	var cost := UpgradeCatalog.cost_for(id)
+	if banked_gold < cost:
+		return false
+	banked_gold -= cost
+	rank += 1
+	set_upgrade_rank(id, rank)
+	match String(def["stat"]):
+		"base_max_health":
+			base_max_health += int(def["amount"])
+		"base_damage":
+			base_damage += int(def["amount"])
+		"starting_gold":
+			starting_gold_bonus += int(def["amount"])
+		"survival_cushion":
+			survival_cushion += int(def["amount"])
+	save_to_disk()
+	emit_signal("meta_changed")
+	return true
 
 func apply_level_drain(levels: int = 1) -> void:
 	# Sensual fail consequence — clamp so we never go below 1.
@@ -91,6 +141,8 @@ func to_dict() -> Dictionary:
 		"banked_gold": banked_gold,
 		"unlocked_biomes": Array(unlocked_biomes),
 		"unlocked_upgrades": Array(unlocked_upgrades),
+		"starting_gold_bonus": starting_gold_bonus,
+		"survival_cushion": survival_cushion,
 		"receptionist_affinity": receptionist_affinity,
 		"last_outcome": last_outcome,
 		# ModifierDef serialization: Phase 3 — store id + magnitude for now
@@ -113,6 +165,8 @@ func from_dict(d: Dictionary) -> void:
 	banked_gold = int(d.get("banked_gold", 0))
 	unlocked_biomes = PackedStringArray(d.get("unlocked_biomes", ["dungeon"]))
 	unlocked_upgrades = PackedStringArray(d.get("unlocked_upgrades", []))
+	starting_gold_bonus = int(d.get("starting_gold_bonus", 0))
+	survival_cushion = int(d.get("survival_cushion", 0))
 	receptionist_affinity = int(d.get("receptionist_affinity", 0))
 	last_outcome = str(d.get("last_outcome", ""))
 	pending_modifiers.clear()
