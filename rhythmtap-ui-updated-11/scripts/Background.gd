@@ -21,15 +21,19 @@ extends Control
 #   current_state is driven by GameManager's enemy_state_changed signal
 #   ("idle" / "attack" / "hurt"). There's no animation between states yet —
 #   it's a hard texture swap. Could become a tween/crossfade later.
+#
+# Phase 9: play_hit_stagger() nudges the drawn sprite left/right briefly.
 # =============================================================================
 
 var pulse:     float = 0.0
 var img_scale: float = 1.0
+var stagger_x: float = 0.0
 
 var enemy_textures:  Dictionary = {}   # state -> ImageTexture
 var current_state:   String     = "idle"
 var active_type:     String     = ""
 var _loading_count:  int        = 0    # threads in flight, currently unread but useful for debugging
+var _stagger_tween:  Tween      = null
 
 func _ready():
 	set_process(true)
@@ -80,6 +84,17 @@ func on_beat(_beat_num: int):
 func on_enemy_state_changed(new_state: String):
 	current_state = new_state
 
+## Phase 9 — brief left/right stagger when the enemy is hit.
+func play_hit_stagger():
+	if _stagger_tween and _stagger_tween.is_valid():
+		_stagger_tween.kill()
+	stagger_x = 0.0
+	_stagger_tween = create_tween()
+	_stagger_tween.tween_property(self, "stagger_x", 7.0, 0.045)
+	_stagger_tween.tween_property(self, "stagger_x", -7.0, 0.07)
+	_stagger_tween.tween_property(self, "stagger_x", 4.0, 0.055)
+	_stagger_tween.tween_property(self, "stagger_x", 0.0, 0.07)
+
 func _process(delta: float):
 	pulse     = max(0.0, pulse - delta * 3.0)
 	img_scale = lerp(img_scale, 1.0, delta * 8.0)
@@ -101,7 +116,7 @@ func _draw():
 	var scale   = min(w / ts.x, h / ts.y) * img_scale
 	var draw_w  = ts.x * scale
 	var draw_h  = ts.y * scale
-	var ox      = (w - draw_w) / 2.0
+	var ox      = (w - draw_w) / 2.0 + stagger_x
 	var oy      = (h - draw_h) / 2.0
 	var bright  = 0.55 + pulse * 0.20
 	draw_texture_rect(tex, Rect2(ox, oy, draw_w, draw_h), false,
