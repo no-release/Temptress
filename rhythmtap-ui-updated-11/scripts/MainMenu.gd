@@ -1,6 +1,9 @@
 extends Control
 # =============================================================================
-# MainMenu.gd — Phase 3
+# MainMenu.gd — Phase 3 / Phase 10
+# =============================================================================
+# Title is optional (reachable from Town / boot hub). Start walks back through
+# the guild door — no longer the primary boot path (see ReceptionistBoot).
 # =============================================================================
 
 @onready var start_button:    Button = $MarginContainer/VBoxContainer/MenuList/Start
@@ -13,7 +16,7 @@ func _ready():
 	tutorial_button.pressed.connect(_on_tutorial_pressed)
 	album_button.pressed.connect(_on_album_pressed)
 	option_button.pressed.connect(_on_option_pressed)
-	start_button.text = "- START QUEST -"
+	start_button.text = "- ENTER GUILD -"
 	# Phase 3: insert Town shortcut above Tutorial
 	var town_btn := Button.new()
 	town_btn.text = "- TOWN -"
@@ -25,7 +28,7 @@ func _ready():
 
 func _on_start_pressed():
 	SoundGen.play_ui_click()
-	get_tree().change_scene_to_file("res://scenes/GuildBoard.tscn")
+	get_tree().change_scene_to_file("res://scenes/ReceptionistBoot.tscn")
 
 func _on_town_pressed():
 	SoundGen.play_ui_click()
