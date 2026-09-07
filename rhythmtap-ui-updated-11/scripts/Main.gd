@@ -1,32 +1,6 @@
 extends Node
-# =============================================================================
-# Main.gd — ALPHA BUILD
-# =============================================================================
-# Scene controller for the gameplay screen (Main.tscn).
-# Owns all UI node references and wires GameManager + RoomManager signals
-# to the interface. Does not contain game logic — that lives in GameManager.
-#
-# UI STRUCTURE (all children of the UI CanvasLayer in Main.tscn):
-#   TopHud          — stage/level/XP/HP/ATK/gold bar across the very top (always visible)
-#   BeatBar         — approach track drawn at bottom; player taps here
-#   EnemyCardAnchor — enemy name/HP/ATK card, bottom-center
-#   DialogueBubble  — speech bubble, top-right, auto-fades after DIALOGUE_SHOW_SEC
-#   LoserButton     — only visible during SURVIVAL; styled as a real button
-#   CountdownLabel  — big pulsing countdown during PUNISHMENT, scales from center
-#                      (pivot_offset set in Main.tscn so it doesn't drift top-left)
-#   TreasureScreen  — full overlay (starts at y=48 so TopHud stays visible)
-#
-# GOLD ANIMATION:
-#   _gold_display chases _gold_target in _process() each frame.
-#   Speed scales with the difference so large gains animate fast then taper off.
-#   This means the label always shows the animated value, not the raw stat.
-#
-# ENEMY HP BAR:
-#   Uses size.x (pixels) not scale.x — scale fights Godot's anchor layout system
-#   and resets on hide/show cycles. After survival the card is hidden then reshown,
-#   so _force_enemy_bar_update() fires a deferred enemy_hp_changed to redraw
-#   the bar once layout has settled.
-# =============================================================================
+# Main.gd -- ALPHA BUILD (Phase 9 hit feedback)
+# Scene controller for Main.tscn. Game logic lives in GameManager.
 
 var game_manager: Node
 var room_manager: Node
@@ -34,7 +8,6 @@ var beat_bar:     Control
 var background:   Control
 var beat_sound:   AudioStreamPlayer
 
-# ── UI Node Refs ──────────────────────────────────────────────────────────────
 @onready var ui_layer: CanvasLayer = $UI
 
 @onready var stage_label:   Label     = $UI/TopHud/MarginContainer/HBoxContainer/StageLabel
@@ -42,6 +15,7 @@ var beat_sound:   AudioStreamPlayer
 @onready var xp_label:      Label     = $UI/TopHud/MarginContainer/HBoxContainer/XPLabel
 @onready var hp_label:      Label     = $UI/TopHud/MarginContainer/HBoxContainer/HPLabel
 @onready var hp_bar_fill:   ColorRect = $UI/TopHud/MarginContainer/HBoxContainer/HPBarBg/HPBarFill
+@onready var hp_bar_ghost:  ColorRect = $UI/TopHud/MarginContainer/HBoxContainer/HPBarBg/HPBarGhost
 @onready var atk_label:     Label     = $UI/TopHud/MarginContainer/HBoxContainer/AtkLabel
 @onready var gold_label:    Label     = $UI/TopHud/MarginContainer/HBoxContainer/GoldLabel
 
@@ -60,15 +34,20 @@ var beat_sound:   AudioStreamPlayer
 @onready var loot_list:       VBoxContainer  = $UI/TreasureScreen/MarginContainer/VBoxContainer/LootList
 @onready var continue_button: Button         = $UI/TreasureScreen/MarginContainer/VBoxContainer/ContinueButton
 
-# ── State ─────────────────────────────────────────────────────────────────────
 var _dialogue_timer: float = 0.0
 const DIALOGUE_SHOW_SEC: float = 3.5
 
-# Gold animation — _gold_display is what's shown, chases _gold_target
+# Gold animation -- _gold_display is what's shown, chases _gold_target
 var _gold_display: float = 0.0
 var _gold_target:  float = 0.0
 
-# ── Ready ─────────────────────────────────────────────────────────────────────
+# Phase 9 -- hit feedback
+var _tracked_player_hp: int = -1
+var _hp_ghost_width: float = -1.0
+var _shake_tween: Tween = null
+var _card_stagger_tween: Tween = null
+var _enemy_card_base_offsets: Vector2 = Vector2.ZERO  # offset_left, offset_right
+
 func _ready():
 	game_manager = $GameManager
 	room_manager = $RoomManager
@@ -76,7 +55,7 @@ func _ready():
 	background   = $Background
 	beat_sound   = $SoundPlayers/BeatSound
 
-	# SoundGen is an autoload — generates the beat click sound procedurally
+	# SoundGen is an autoload -- generates the beat click sound procedurally
 	beat_sound.stream       = SoundGen.create_beat_hit()
 	game_manager.beat_sound = beat_sound
 	beat_bar.game_manager   = game_manager
@@ -105,11 +84,13 @@ func _ready():
 	_on_enemy_type_swapped(game_manager.active_enemy_type)
 	_gold_display = float(game_manager.player_gold)
 	_gold_target  = _gold_display
+	_tracked_player_hp = game_manager.player_health
+	_enemy_card_base_offsets = Vector2(enemy_card_anchor.offset_left, enemy_card_anchor.offset_right)
 
 	# Deferred so Godot's layout pass runs first and size.x values are real
 	call_deferred("_update_all_hud")
 
-	# Phase 8: returning from FirstMeetVN — resume the same room, do not restart the quest
+	# Phase 8: returning from FirstMeetVN -- resume the same room, do not restart the quest
 	if FirstMeetBridge.return_to_combat:
 		FirstMeetBridge.return_to_combat = false
 		var idx: int = FirstMeetBridge.saved_room_index
@@ -122,27 +103,47 @@ func _ready():
 		# RoomManager drives the run from ActiveRun (guild quest) when present
 		room_manager.start_run()
 
-# ── HUD Update ────────────────────────────────────────────────────────────────
 func _update_all_hud():
 	_update_player_hud()
 	_update_enemy_hud()
 
 func _update_player_hud():
 	var gm = game_manager
+	var hp_dropped := _tracked_player_hp >= 0 and gm.player_health < _tracked_player_hp
 	hp_label.text  = "HP: %d/%d" % [gm.player_health, gm.player_max_health]
 	atk_label.text = "ATK: %d" % gm.player_damage
 	level_label.text = "LV %d" % gm.player_level
 	xp_label.text    = "XP: %d/%d" % [gm.player_xp, gm.xp_to_next_level()]
-	# Don't set gold_label here — it's animated in _process via _gold_target
+	# Don't set gold_label here -- it's animated in _process via _gold_target
 	_gold_target = float(gm.player_gold)
 
 	var p_pct = clamp(
 		float(gm.player_health) / float(gm.player_max_health) if gm.player_max_health > 0 else 0.0,
 		0.0, 1.0)
-	hp_bar_fill.size.x = hp_bar_fill.get_parent().size.x * p_pct
+	var bg_w: float = hp_bar_fill.get_parent().size.x
+	var new_w: float = bg_w * p_pct
+	# On damage: keep ghost at previous fill width so the lost chunk shows red, then drains
+	if hp_dropped:
+		var prev_w: float = hp_bar_fill.size.x if hp_bar_fill.size.x > 0.0 else new_w
+		if _hp_ghost_width < 0.0:
+			_hp_ghost_width = prev_w
+		else:
+			_hp_ghost_width = maxf(_hp_ghost_width, prev_w)
+		_play_player_hurt_feedback()
+	elif _tracked_player_hp >= 0 and gm.player_health >= _tracked_player_hp:
+		# Heal / init / restore -- snap ghost to fill
+		_hp_ghost_width = new_w
+	hp_bar_fill.size.x = new_w
 	hp_bar_fill.color = Color(0.95, 0.15, 0.15, 1) if p_pct <= 0.25 else \
 						Color(0.95, 0.65, 0.1,  1) if p_pct <= 0.5  else \
 						Color(0.85, 0.85, 0.85, 1)
+	if hp_bar_ghost:
+		hp_bar_ghost.position = Vector2.ZERO
+		hp_bar_ghost.size.y = hp_bar_fill.size.y if hp_bar_fill.size.y > 0.0 else hp_bar_fill.get_parent().size.y
+		if _hp_ghost_width < 0.0:
+			_hp_ghost_width = new_w
+		hp_bar_ghost.size.x = maxf(_hp_ghost_width, new_w)
+	_tracked_player_hp = gm.player_health
 
 func _update_enemy_hud():
 	var gm = game_manager
@@ -155,26 +156,35 @@ func _update_enemy_hud():
 		0.0, 1.0)
 	enemy_hp_bar_fill.size.x = enemy_hp_bar_fill.get_parent().size.x * e_pct
 
-# ── Process ───────────────────────────────────────────────────────────────────
 func _process(delta: float):
 	background.size = get_viewport().get_visible_rect().size
 	beat_bar.size   = background.size
 
-	# Dialogue fade-out — alpha reaches 0 then hides the node
+	# Dialogue fade-out -- alpha reaches 0 then hides the node
 	if _dialogue_timer > 0.0:
 		_dialogue_timer -= delta
 		dialogue_bubble.modulate.a = min(1.0, _dialogue_timer * 2.0)
 		if _dialogue_timer <= 0.0:
 			dialogue_bubble.visible = false
 
-	# Animated gold counter — fast when far from target, tapers as it approaches
+	# Animated gold counter -- fast when far from target, tapers as it approaches
 	if not is_equal_approx(_gold_display, _gold_target):
 		var diff  = _gold_target - _gold_display
 		var speed = max(abs(diff) * 3.0, 10.0)
 		_gold_display = move_toward(_gold_display, _gold_target, speed * delta)
 		gold_label.text = "Gold: %d" % int(_gold_display)
 
-# ── Treasure Screen ───────────────────────────────────────────────────────────
+	# Phase 9 -- HP ghost drains down to the real fill width after damage
+	if hp_bar_ghost and _hp_ghost_width >= 0.0:
+		var fill_w: float = hp_bar_fill.size.x
+		if _hp_ghost_width > fill_w:
+			var drain := maxf(36.0, (_hp_ghost_width - fill_w) * 2.8)
+			_hp_ghost_width = move_toward(_hp_ghost_width, fill_w, drain * delta)
+		else:
+			_hp_ghost_width = fill_w
+		hp_bar_ghost.size.x = _hp_ghost_width
+		hp_bar_ghost.size.y = hp_bar_fill.size.y if hp_bar_fill.size.y > 0.0 else hp_bar_fill.get_parent().size.y
+
 func _show_treasure_screen(gold_reward: int):
 	for child in loot_list.get_children():
 		child.queue_free()
@@ -197,10 +207,9 @@ func _show_treasure_screen(gold_reward: int):
 func _on_treasure_continue():
 	SoundGen.play_ui_click()
 	treasure_screen.visible = false
-	# Always advance — past the last room this emits run_complete
+	# Always advance -- past the last room this emits run_complete
 	room_manager.advance_room()
 
-# ── Room Routing ──────────────────────────────────────────────────────────────
 # RoomManager emits room_started with the room dict; we dispatch here.
 # First combat room is a no-op because GameManager already booted with "goblin".
 func _on_room_started(room: Dictionary):
@@ -244,20 +253,19 @@ func _on_run_complete():
 	MusicDirector.stop()
 	get_tree().change_scene_to_file("res://scenes/Town.tscn")
 
-# ── Signal Handlers ───────────────────────────────────────────────────────────
 func _on_new_beat(beat_num: int):
 	beat_bar.on_beat()
 	background.on_beat(beat_num)
 
 func _on_enemy_state_changed(state: String):
 	background.on_enemy_state_changed(state)
+	if state == "hurt":
+		_play_enemy_hit_feedback()
 
 func _on_enemy_type_swapped(type_name: String):
 	background.load_enemy_assets(type_name)
 	var pretty = type_name.replace("_", " ").capitalize()
 	enemy_name_label.text = "- %s -" % pretty
-
-
 
 func _on_enemy_dialogue(text: String):
 	if text == "":
@@ -271,7 +279,7 @@ func _on_enemy_defeated(gold_reward: int):
 	_show_treasure_screen(gold_reward)
 
 func _on_enter_survival(_enemy_name: String):
-	# Hide the enemy card while the loser button is showing — they overlap
+	# Hide the enemy card while the loser button is showing -- they overlap
 	loser_button.visible      = true
 	enemy_card_anchor.visible = false
 
@@ -294,7 +302,7 @@ func _on_loser_pressed():
 	game_manager.on_player_concedes()
 
 func _on_enter_punishment(_enemy_name: String):
-	# Countdown ticks immediately — no delay (simplified from earlier version)
+	# Countdown ticks immediately -- no delay (simplified from earlier version)
 	countdown_label.modulate = Color(1, 1, 1, 1)
 
 func _on_punishment_tick(seconds_left: float):
@@ -310,8 +318,45 @@ func _on_game_over(_enemy_name: String):
 	MusicDirector.stop()
 	get_tree().change_scene_to_file("res://scenes/Town.tscn")
 
+func _play_player_hurt_feedback() -> void:
+	SoundGen.play_hurt()
+	if _shake_tween and _shake_tween.is_valid():
+		_shake_tween.kill()
+	# Minor screenshake via CanvasLayer offset (no Camera2D in Main.tscn)
+	ui_layer.offset = Vector2.ZERO
+	_shake_tween = create_tween()
+	_shake_tween.tween_property(ui_layer, "offset", Vector2(5, -3), 0.035)
+	_shake_tween.tween_property(ui_layer, "offset", Vector2(-4, 3), 0.04)
+	_shake_tween.tween_property(ui_layer, "offset", Vector2(3, -2), 0.035)
+	_shake_tween.tween_property(ui_layer, "offset", Vector2.ZERO, 0.05)
 
-# ── Rest / shop overlays (Phase 5+) ───────────────────────────────────────────
+func _play_enemy_hit_feedback() -> void:
+	SoundGen.play_hit()
+	if background.has_method("play_hit_stagger"):
+		background.play_hit_stagger()
+	# Also nudge the enemy card left/right briefly
+	if _card_stagger_tween and _card_stagger_tween.is_valid():
+		_card_stagger_tween.kill()
+	var base_l: float = _enemy_card_base_offsets.x
+	var base_r: float = _enemy_card_base_offsets.y
+	enemy_card_anchor.offset_left = base_l
+	enemy_card_anchor.offset_right = base_r
+	_card_stagger_tween = create_tween()
+	_card_stagger_tween.tween_callback(func():
+		enemy_card_anchor.offset_left = base_l + 6.0
+		enemy_card_anchor.offset_right = base_r + 6.0
+	)
+	_card_stagger_tween.tween_interval(0.045)
+	_card_stagger_tween.tween_callback(func():
+		enemy_card_anchor.offset_left = base_l - 6.0
+		enemy_card_anchor.offset_right = base_r - 6.0
+	)
+	_card_stagger_tween.tween_interval(0.07)
+	_card_stagger_tween.tween_callback(func():
+		enemy_card_anchor.offset_left = base_l
+		enemy_card_anchor.offset_right = base_r
+	)
+
 func _run_rest_room() -> void:
 	var heal := int(game_manager.player_max_health * 0.35)
 	game_manager.player_health = mini(game_manager.player_max_health, game_manager.player_health + heal)
@@ -330,7 +375,7 @@ func _run_shop_room() -> void:
 	var can_buy: bool = int(game_manager.player_gold) >= price
 	var detail := "Travelling merchant.\n20 gold: +8 HP now (from quest bag)."
 	if not can_buy:
-		detail += "\n(You can't afford anything — move on.)"
+		detail += "\n(You can't afford anything -- move on.)"
 	_show_choice_overlay(
 		"- SHOP -",
 		detail,
@@ -344,7 +389,7 @@ func _run_shop_room() -> void:
 				game_manager.emit_signal("player_stats_changed")
 			room_manager.advance_room()
 	)
-	# Always offer a leave if buy shown — second button
+	# Always offer a leave if buy shown -- second button
 	if can_buy and _overlay_secondary:
 		_overlay_secondary.text = "Leave"
 		_overlay_secondary.visible = true
