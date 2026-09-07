@@ -35,6 +35,23 @@ func start_run(run_def: Array = []):
 		ActiveRun.state.rooms = _rooms.duplicate(true)
 	advance_room()
 
+## Phase 8: resume a mid-run room after FirstMeetVN without restarting the quest.
+func restore_at_room(room_index: int) -> void:
+	var run_def: Array = []
+	if ActiveRun.has_run():
+		run_def = ActiveRun.room_list()
+	if run_def.is_empty():
+		run_def = DEFAULT_RUN
+	_rooms = run_def.duplicate(true)
+	if _rooms.is_empty():
+		emit_signal("run_complete")
+		return
+	_current_index = clampi(room_index, 0, _rooms.size() - 1)
+	if ActiveRun.state:
+		ActiveRun.state.rooms = _rooms.duplicate(true)
+		ActiveRun.state.room_index = _current_index
+	emit_signal("room_started", current_room)
+
 func advance_room():
 	_current_index += 1
 	if ActiveRun.state:
