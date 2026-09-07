@@ -1,11 +1,12 @@
 extends RefCounted
 class_name QuestGenerator
 # =============================================================================
-# QuestGenerator — Phase 1 + Phase 11 ranked offers
+# QuestGenerator — Phase 1 + Phase 11 ranked offers + Phase 13 uniqueness
 # =============================================================================
 # Turns a QuestDef into a RoomManager-compatible room list.
 # Escalates enemy tier across the run (weak → strong within quest tier range).
 # Phase 11: generate N board offers scaled to MetaSave.guild_rank.
+# Phase 13: exclude_keys keeps simultaneous offers unique (no duplicate combos).
 # =============================================================================
 
 const ALL_BIOMES := ["dungeon", "forest", "swamp", "volcanic", "palace"]
@@ -32,22 +33,23 @@ static func build_rooms(quest: QuestDef) -> Array:
 
 	return rooms
 
-## Generate N distinct-ish quest offers for the guild board, scaled to rank.
-static func generate_offers(count: int = -1, rank: String = "") -> Array:
+## Generate N distinct quest offers for the guild board, scaled to rank.
+## exclude_keys: map of offer_key -> true to skip (Phase 13 persistence / refresh).
+static func generate_offers(count: int = -1, rank: String = "", exclude_keys: Dictionary = {}) -> Array:
 	var n := count if count > 0 else MetaSave.board_offer_count()
 	n = clampi(n, 1, 4)
 	var r := rank if rank != "" else MetaSave.guild_rank
 	var ranges: Dictionary = rank_param_ranges(r)
 	var offers: Array = []
-	var seen: Dictionary = {}
+	var seen: Dictionary = exclude_keys.duplicate()
 	var attempts := 0
-	while offers.size() < n and attempts < 40:
+	while offers.size() < n and attempts < 80:
 		attempts += 1
 		var length: int = ranges["lengths"][randi() % ranges["lengths"].size()]
 		var difficulty: int = ranges["diffs"][randi() % ranges["diffs"].size()]
 		var biome: String = _pick_biome()
 		var key := "%d_%d_%s" % [length, difficulty, biome]
-		if seen.has(key) and offers.size() + 1 < n:
+		if seen.has(key):
 			continue
 		seen[key] = true
 		var q := QuestDef.from_board(length, difficulty, biome)
