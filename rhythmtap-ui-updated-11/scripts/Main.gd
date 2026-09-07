@@ -34,7 +34,7 @@ var beat_bar:     Control
 var background:   Control
 var beat_sound:   AudioStreamPlayer
 
-# ── UI Node Refs ──────────────────────────────────────────────────────────────
+# ── UI Node Refs ───────────────────────────────────────────────────────────
 @onready var ui_layer: CanvasLayer = $UI
 
 @onready var stage_label:   Label     = $UI/TopHud/MarginContainer/HBoxContainer/StageLabel
@@ -60,7 +60,7 @@ var beat_sound:   AudioStreamPlayer
 @onready var loot_list:       VBoxContainer  = $UI/TreasureScreen/MarginContainer/VBoxContainer/LootList
 @onready var continue_button: Button         = $UI/TreasureScreen/MarginContainer/VBoxContainer/ContinueButton
 
-# ── State ─────────────────────────────────────────────────────────────────────
+# ── State ──────────────────────────────────────────────────────────────────
 var _dialogue_timer: float = 0.0
 const DIALOGUE_SHOW_SEC: float = 3.5
 
@@ -68,7 +68,7 @@ const DIALOGUE_SHOW_SEC: float = 3.5
 var _gold_display: float = 0.0
 var _gold_target:  float = 0.0
 
-# ── Ready ─────────────────────────────────────────────────────────────────────
+# ── Ready ──────────────────────────────────────────────────────────────────
 func _ready():
 	game_manager = $GameManager
 	room_manager = $RoomManager
@@ -112,7 +112,7 @@ func _ready():
 	# RoomManager drives the run from ActiveRun (guild quest) when present
 	room_manager.start_run()
 
-# ── HUD Update ────────────────────────────────────────────────────────────────
+# ── HUD Update ─────────────────────────────────────────────────────────────
 func _update_all_hud():
 	_update_player_hud()
 	_update_enemy_hud()
@@ -145,7 +145,7 @@ func _update_enemy_hud():
 		0.0, 1.0)
 	enemy_hp_bar_fill.size.x = enemy_hp_bar_fill.get_parent().size.x * e_pct
 
-# ── Process ───────────────────────────────────────────────────────────────────
+# ── Process ────────────────────────────────────────────────────────────────
 func _process(delta: float):
 	background.size = get_viewport().get_visible_rect().size
 	beat_bar.size   = background.size
@@ -164,7 +164,7 @@ func _process(delta: float):
 		_gold_display = move_toward(_gold_display, _gold_target, speed * delta)
 		gold_label.text = "Gold: %d" % int(_gold_display)
 
-# ── Treasure Screen ───────────────────────────────────────────────────────────
+# ── Treasure Screen ────────────────────────────────────────────────────────
 func _show_treasure_screen(gold_reward: int):
 	for child in loot_list.get_children():
 		child.queue_free()
@@ -190,7 +190,7 @@ func _on_treasure_continue():
 	# Always advance — past the last room this emits run_complete
 	room_manager.advance_room()
 
-# ── Room Routing ──────────────────────────────────────────────────────────────
+# ── Room Routing ───────────────────────────────────────────────────────────
 # RoomManager emits room_started with the room dict; we dispatch here.
 # First combat room is a no-op because GameManager already booted with "goblin".
 func _on_room_started(room: Dictionary):
@@ -204,6 +204,10 @@ func _on_room_started(room: Dictionary):
 	match room.get("type", ""):
 		"combat":
 			var enemy = room.get("enemy", "slime_girl")
+			if not MetaSave.has_met_enemy(enemy):
+				await _play_first_meet_intro(enemy)
+				MetaSave.mark_enemy_met(enemy)
+				MetaSave.save_to_disk()
 			if game_manager.game_state == game_manager.GameState.TREASURE:
 				game_manager.continue_after_treasure(enemy)
 			else:
@@ -227,7 +231,7 @@ func _on_run_complete():
 	ActiveRun.end_run()
 	get_tree().change_scene_to_file("res://scenes/Town.tscn")
 
-# ── Signal Handlers ───────────────────────────────────────────────────────────
+# ── Signal Handlers ────────────────────────────────────────────────────────
 func _on_new_beat(beat_num: int):
 	beat_bar.on_beat()
 	background.on_beat(beat_num)
@@ -291,6 +295,20 @@ func _on_game_over(_enemy_name: String):
 	# Fail path already called ActiveRun.mark_conceded in on_player_concedes
 	ActiveRun.end_run()
 	get_tree().change_scene_to_file("res://scenes/Town.tscn")
+
+
+# ── Phase 6: first-meet enemy intro ────────────────────────────────────────
+func _play_first_meet_intro(enemy_id: String) -> void:
+	game_manager.set_process(false)
+	var pages := FirstMeetScenes.enemy_pages(enemy_id)
+	var pretty := enemy_id.replace("_", " ").capitalize()
+	var title := "- FIRST MEETING: %s -" % pretty
+	for i in range(pages.size()):
+		var last := i >= pages.size() - 1
+		var btn := "Face her" if last else "Continue (%d/%d)" % [i + 1, pages.size()]
+		_show_choice_overlay(title, pages[i], btn, func(): pass)
+		await _overlay_done
+	game_manager.set_process(true)
 
 func _run_rest_room() -> void:
 	var heal := int(game_manager.player_max_health * 0.35)
@@ -386,4 +404,3 @@ func _close_overlay() -> void:
 		_overlay_root = null
 	_overlay_secondary = null
 	emit_signal("_overlay_done")
-
