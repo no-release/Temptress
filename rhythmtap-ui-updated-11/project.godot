@@ -26,6 +26,8 @@ MetaSave="*res://scripts/data/MetaSave.gd"
 ActiveRun="*res://scripts/data/ActiveRun.gd"
 MusicDirector="*res://scripts/MusicDirector.gd"
 FirstMeetBridge="*res://scripts/FirstMeetBridge.gd"
+Phase12CombatUI="*res://scripts/Phase12CombatUI.gd"
+Phase12CombatLogic="*res://scripts/Phase12CombatLogic.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]

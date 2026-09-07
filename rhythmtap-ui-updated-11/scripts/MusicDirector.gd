@@ -1,9 +1,10 @@
 extends Node
 # =============================================================================
-# MusicDirector.gd — Phase 7 situation-based BGM
+# MusicDirector.gd — Phase 7 situation-based BGM (+ Phase 12 BPM map)
 # =============================================================================
 # Autoload. Call MusicDirector.play("combat") / stop() / play("") to silence.
 # Swap tracks by editing TRACKS — one place for all situation music.
+# AudioStreamMP3 has no BPM metadata; TRACK_BPM supplies song tempo for combat.
 # =============================================================================
 
 const TRACKS := {
@@ -11,6 +12,12 @@ const TRACKS := {
 	"combat": "res://audio/combat_theme.mp3",
 }
 
+## Optional BPM per TRACKS key. Default combat theme ≈ 128.
+const TRACK_BPM := {
+	"combat": 128.0,
+}
+
+const DEFAULT_BPM := 128.0
 const FADE_SEC := 0.6
 
 var _player: AudioStreamPlayer = null
@@ -80,3 +87,15 @@ func _fade_to(stream: AudioStream) -> void:
 
 func current_situation() -> String:
 	return _current
+
+## BPM for a situation key (or current track / combat default).
+func get_track_bpm(situation: String = "") -> float:
+	var key := situation if situation != "" else _current
+	if key == "":
+		key = "combat"
+	if TRACK_BPM.has(key):
+		return float(TRACK_BPM[key])
+	return DEFAULT_BPM
+
+func get_current_bpm() -> float:
+	return get_track_bpm(_current if _current != "" else "combat")

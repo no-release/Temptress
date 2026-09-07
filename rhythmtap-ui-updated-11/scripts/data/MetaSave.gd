@@ -39,6 +39,8 @@ var receptionist_contract_signed: bool = false
 var met_enemies: PackedStringArray = PackedStringArray()
 ## Phase 11 — public guild rank (E easiest → S hardest)
 var guild_rank: String = "E"
+## Phase 12 — last contest vs each enemy: enemy_id -> "won" | "lost"
+var enemy_last_result: Dictionary = {}
 
 # ── Pending punishments for the NEXT run ───────────────────────────────────
 var pending_modifiers: Array = []  # Array[ModifierDef] (serialize carefully)
@@ -58,6 +60,17 @@ func mark_enemy_met(enemy_id: String) -> void:
 	if enemy_id == "" or enemy_id in met_enemies:
 		return
 	met_enemies.append(enemy_id)
+	emit_signal("meta_changed")
+
+func get_enemy_last_result(enemy_id: String) -> String:
+	return str(enemy_last_result.get(enemy_id, ""))
+
+func set_enemy_last_result(enemy_id: String, result: String) -> void:
+	if enemy_id == "":
+		return
+	if result not in ["won", "lost"]:
+		return
+	enemy_last_result[enemy_id] = result
 	emit_signal("meta_changed")
 
 func sign_receptionist_contract() -> void:
@@ -205,6 +218,7 @@ func to_dict() -> Dictionary:
 		"receptionist_contract_signed": receptionist_contract_signed,
 		"met_enemies": Array(met_enemies),
 		"guild_rank": guild_rank,
+		"enemy_last_result": enemy_last_result.duplicate(),
 		# ModifierDef serialization: Phase 3 — store id + magnitude for now
 		"pending_modifiers": pending_modifiers.map(func(m): return {
 			"id": m.id,
@@ -233,6 +247,13 @@ func from_dict(d: Dictionary) -> void:
 	met_enemies = PackedStringArray(d.get("met_enemies", []))
 	var loaded_rank := str(d.get("guild_rank", "E")).to_upper()
 	guild_rank = loaded_rank if loaded_rank in GUILD_RANKS else "E"
+	enemy_last_result.clear()
+	var elr = d.get("enemy_last_result", {})
+	if typeof(elr) == TYPE_DICTIONARY:
+		for k in elr.keys():
+			var v := str(elr[k])
+			if v in ["won", "lost"]:
+				enemy_last_result[str(k)] = v
 	pending_modifiers.clear()
 	for md in d.get("pending_modifiers", []):
 		var m := ModifierDef.new()

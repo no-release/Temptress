@@ -126,6 +126,7 @@ theme_override_font_sizes/font_size = 14
 text = "Gold: 0"
 
 [node name="Icons" type="HBoxContainer" parent="MarginContainer/HBoxContainer" unique_id=20390433]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 6
 alignment = 2
