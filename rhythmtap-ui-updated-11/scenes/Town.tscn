@@ -79,6 +79,12 @@ layout_mode = 2
 size_flags_horizontal = 0
 text = "- HOME -"
 
+[node name="PayButton" type="Button" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 0
+text = "- PAY GUILD FINE -"
+
 [node name="MenuButton" type="Button" parent="Margin/VBox"]
 layout_mode = 2
 size_flags_horizontal = 0
