@@ -1,9 +1,9 @@
 extends Control
 # =============================================================================
-# Town.gd — Phase 3 town loop + Phase 6 receptionist contract intro
+# Town.gd -- Phase 3 town loop + Phase 10 post-run short greetings
 # =============================================================================
-# Hub after clear/concede. Receptionist dialogue pools, optional pay-off of fines,
-# routes to Guild / Home / Title. First visit plays a multi-page contract signing.
+# Hub after clear/concede. Short receptionist lines (affinity / last_outcome).
+# Elaborate first-visit contract moved to ReceptionistBoot (Phase 10).
 # =============================================================================
 
 @onready var title_label: Label = $Margin/VBox/Title
@@ -15,24 +15,21 @@ extends Control
 @onready var pay_button: Button = $Margin/VBox/PayButton
 @onready var menu_button: Button = $Margin/VBox/MenuButton
 
-var _contract_page: int = 0
-var _advance_button: Button = null
-
 const DISAPPOINTED := [
-	"Receptionist: \"You failed your quest. I expected better — there will be consequences.\"",
-	"Receptionist: \"Back already… and empty-handed. The guild keeps records.\"",
-	"Receptionist: \"You gave in. Wash up. The board is still open — if they'll still take you.\"",
-	"Receptionist: \"…Again. Don't make me explain this to the guildmaster.\"",
+	"Receptionist: You failed your quest. I expected better -- there will be consequences.",
+	"Receptionist: Back already... and empty-handed. The guild keeps records.",
+	"Receptionist: You gave in. Wash up. The board is still open -- if they will still take you.",
+	"Receptionist: ...Again. Do not make me explain this to the guildmaster.",
 ]
 const PLEASED := [
-	"Receptionist: \"You held out and finished. Good. Spoils are banked.\"",
-	"Receptionist: \"A clean clear. The guild notices the ones who don't fold.\"",
-	"Receptionist: \"Welcome back, hunter. Your purse looks healthier.\"",
-	"Receptionist: \"Flawless enough. Rest, then take another contract.\"",
+	"Receptionist: You held out and finished. Good. Spoils are banked.",
+	"Receptionist: A clean clear. The guild notices the ones who do not fold.",
+	"Receptionist: Welcome back, hunter. Your purse looks healthier.",
+	"Receptionist: Flawless enough. Rest, then take another contract.",
 ]
 const NEUTRAL := [
-	"Receptionist: \"Welcome to guild town. The board is open.\"",
-	"Receptionist: \"Contracts, rest, and home — in that order if you're smart.\"",
+	"Receptionist: Welcome to guild town. The board is open.",
+	"Receptionist: Contracts, rest, and home -- in that order if you are smart.",
 ]
 
 func _ready() -> void:
@@ -40,54 +37,11 @@ func _ready() -> void:
 	home_button.pressed.connect(_on_home)
 	pay_button.pressed.connect(_on_pay_fine)
 	menu_button.pressed.connect(_on_menu)
+	# Phase 10: contract lives on boot; if unsigned, send player through the door
 	if not MetaSave.receptionist_contract_signed:
-		_start_contract_intro()
-	else:
-		_refresh()
-
-func _set_hub_buttons_visible(vis: bool) -> void:
-	guild_button.visible = vis
-	home_button.visible = vis
-	menu_button.visible = vis
-	# pay_button visibility is outcome-driven in _refresh
-
-func _start_contract_intro() -> void:
-	_contract_page = 0
-	_set_hub_buttons_visible(false)
-	pay_button.visible = false
-	status_label.text = "Guild induction"
-	modifiers_label.text = "Read carefully. You sign with your eyes open."
-	if _advance_button == null:
-		_advance_button = Button.new()
-		_advance_button.name = "ContractAdvance"
-		$Margin/VBox.add_child(_advance_button)
-		_advance_button.pressed.connect(_on_contract_advance)
-	_advance_button.visible = true
-	_show_contract_page()
-
-func _show_contract_page() -> void:
-	var pages := FirstMeetScenes.receptionist_pages()
-	var last := _contract_page >= pages.size() - 1
-	receptionist_label.text = pages[_contract_page]
-	if last:
-		_advance_button.text = "- SIGN THE CONTRACT -"
-	else:
-		_advance_button.text = "- CONTINUE - (%d/%d)" % [_contract_page + 1, pages.size()]
-
-func _on_contract_advance() -> void:
-	SoundGen.play_ui_click()
-	var pages := FirstMeetScenes.receptionist_pages()
-	if _contract_page >= pages.size() - 1:
-		MetaSave.sign_receptionist_contract()
-		MetaSave.save_to_disk()
-		if _advance_button:
-			_advance_button.visible = false
-		_set_hub_buttons_visible(true)
-		receptionist_label.text = "Receptionist: \"Ink's dry. Don't embarrass me on your first outing.\""
-		_refresh()
+		get_tree().change_scene_to_file("res://scenes/ReceptionistBoot.tscn")
 		return
-	_contract_page += 1
-	_show_contract_page()
+	_refresh()
 
 func _refresh() -> void:
 	var affinity := MetaSave.receptionist_affinity
@@ -125,7 +79,7 @@ func _format_modifiers() -> String:
 		return "No active fines or curses."
 	var lines: PackedStringArray = PackedStringArray(["Pending next-run punishments:"])
 	for m in MetaSave.pending_modifiers:
-		lines.append("• %s — %s" % [m.display_name, m.description])
+		lines.append("- %s -- %s" % [m.display_name, m.description])
 	return "\n".join(lines)
 
 func _on_pay_fine() -> void:
@@ -134,10 +88,9 @@ func _on_pay_fine() -> void:
 	if cost <= 0:
 		return
 	if MetaSave.banked_gold < cost:
-		receptionist_label.text = "Receptionist: \"You don't have enough banked gold to clear the fine.\""
+		receptionist_label.text = "Receptionist: You do not have enough banked gold to clear the fine."
 		return
 	MetaSave.banked_gold -= cost
-	# Drop GOLD_DEBT modifiers only
 	var kept: Array = []
 	for m in MetaSave.pending_modifiers:
 		if m.effect != ModifierDef.Effect.GOLD_DEBT:
@@ -145,7 +98,7 @@ func _on_pay_fine() -> void:
 	MetaSave.pending_modifiers = kept
 	MetaSave.receptionist_affinity = mini(10, MetaSave.receptionist_affinity + 1)
 	MetaSave.save_to_disk()
-	receptionist_label.text = "Receptionist: \"Debt settled. Don't make me write another notice.\""
+	receptionist_label.text = "Receptionist: Debt settled. Do not make me write another notice."
 	_refresh()
 
 func _on_guild() -> void:
