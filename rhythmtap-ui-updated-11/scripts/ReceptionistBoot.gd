@@ -43,7 +43,7 @@ func _ready() -> void:
 	else:
 		_is_contract = false
 		title_label.text = "- GUILD HALL -"
-		_pages = FirstMeetScenes.receptionist_return_pages(
+		_pages = ReceptionistGreetings.return_pages(
 			MetaSave.last_outcome, MetaSave.receptionist_affinity
 		)
 	if _pages.is_empty():
