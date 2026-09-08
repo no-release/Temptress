@@ -1,46 +1,95 @@
 extends RefCounted
 class_name EncounterLines
-# =============================================================================
-# EncounterLines — Phase 12 rematch greetings + level-drain flavor
-# =============================================================================
-# Short non-VN lines for already-met enemies (first meet still uses FirstMeetVN).
-# last_result: "won" (player cleared that foe) | "lost" (player conceded to them).
-# =============================================================================
+# Rematch + drain — voice pack, tagged for combat subtitles.
 
 const REMATCH_WON := {
-	"slime_girl":  ["Back again? Still sticky from last time~", "You beat me once. Let's see if that was luck."],
-	"goblin_girl": ["Hehe, rematch? I remember you winning!", "Back for another round, softie?"],
-	"succubus":    ["You walked away last time. Brave… or foolish~", "Still tasting that victory? I'll take it back."],
-	"kitsune":     ["The fox remembers who scratched her. Hello again.", "You won once. Tails don't forget."],
-	"troll_girl":  ["You beat Troll Girl. Rematch. Now.", "Back. I hit harder this time."],
-	"dragoness":   ["You left my hoard once. Rare. Do not expect mercy twice.", "Treasure-hunter returns. The beat still claims."],
+	"slime_girl": [
+		"[drip]Back again? Still sticky from last time~[/drip]",
+		"[tease]You beat me once.[/tease] [clingy]Let's see if that was luck… or a fluke drip.[/clingy]",
+	],
+	"goblin_girl": [
+		"[giggle]Hehe, rematch?[/giggle] [brat]I remember you winning — won't happen twice![/brat]",
+		"[tease]Back for another round, softie?[/tease]",
+	],
+	"succubus": [
+		"[velvet]You walked away last time.[/velvet] [tease]Brave… or foolish~[/tease]",
+		"[lick]Still tasting that victory?[/lick] [predator]I'll take it back, slow.[/predator]",
+	],
+	"kitsune": [
+		"[sly]The fox remembers who scratched her.[/sly] Hello again.",
+		"[tease]You won once.[/tease] [smug]Tails don't forget — or forgive.[/smug]",
+	],
+	"troll_girl": [
+		"[blunt]You beat Troll Girl. Rematch. Now.[/blunt]",
+		"[growl]Back. I hit harder this time.[/growl]",
+	],
+	"dragoness": [
+		"[queen]You left my hoard once. Rare.[/queen] Do not expect mercy twice.",
+		"[echo]Treasure-hunter returns.[/echo] [regal]The beat still claims.[/regal]",
+	],
 }
 
 const REMATCH_LOST := {
-	"slime_girl":  ["Ooh, you folded for me last time~ Miss that drip?", "Back already? Your level still tastes sweet."],
-	"goblin_girl": ["Hah! The one who gave in! Ready to break again?", "Look who crawled back after conceding~"],
-	"succubus":    ["My favorite quitter. Shall I drain you again?", "You admitted defeat before. Body remembers."],
-	"kitsune":     ["You gave in so prettily last time. Again?", "Folded for foxes once… ears still red?"],
-	"troll_girl":  ["You said you lost. Good. Say it again.", "You broke for me. Rematch. Same ending."],
-	"dragoness":   ["You surrendered to a dragoness. Kneel to the rhythm again.", "The guild knows you folded. Prove otherwise… or don't."],
+	"slime_girl": [
+		"[moan]Ooh, you folded for me last time~[/moan] [drip]Miss that drip?[/drip]",
+		"[clingy]Back already?[/clingy] [drain]Your level still tastes sweet on my tongue.[/drain]",
+	],
+	"goblin_girl": [
+		"[laugh]Hah! The one who gave in![/laugh] [hot]Ready to break again?[/hot]",
+		"[brat]Look who crawled back after conceding~[/brat]",
+	],
+	"succubus": [
+		"[heart]My favorite quitter.[/heart] [drain]Shall I drain you again?[/drain]",
+		"[command]You admitted defeat before.[/command] [velvet]Your body remembers me.[/velvet]",
+	],
+	"kitsune": [
+		"[sweet]You gave in so prettily last time.[/sweet] Again?",
+		"[giggle]Folded for foxes once… ears still red?[/giggle]",
+	],
+	"troll_girl": [
+		"[command]You said you lost. Good. Say it again.[/command]",
+		"[blunt]You broke for me. Rematch. Same ending.[/blunt]",
+	],
+	"dragoness": [
+		"[queen]You surrendered to a dragoness.[/queen] [command]Kneel to the rhythm again.[/command]",
+		"[drain]The guild knows you folded.[/drain] Prove otherwise… or don't.",
+	],
 }
 
 const REMATCH_NEUTRAL := {
-	"slime_girl":  ["Mmm, familiar face. Slippery beats await~"],
-	"goblin_girl": ["Oh, you again. Try to keep up!"],
-	"succubus":    ["We meet again. Dance for me."],
-	"kitsune":     ["Nine tails, same rhythm. Keep up~"],
-	"troll_girl":  ["You return. Boom. Boom."],
-	"dragoness":   ["Again before a dragoness. Hold the heat."],
+	"slime_girl":  ["[drip]Mmm, familiar face. Slippery beats await~[/drip]"],
+	"goblin_girl": ["[giggle]Oh, you again. Try to keep up![/giggle]"],
+	"succubus":    ["[velvet]We meet again.[/velvet] [command]Dance for me.[/command]"],
+	"kitsune":     ["[sly]Nine tails, same rhythm. Keep up~[/sly]"],
+	"troll_girl":  ["[blunt]You return.[/blunt] [big]Boom. Boom.[/big]"],
+	"dragoness":   ["[queen]Again before a dragoness.[/queen] [hot]Hold the heat.[/hot]"],
 }
 
 const LEVEL_DRAIN := {
-	"slime_girl":  ["Feel that? I'm melting a whole level out of you~", "Drip… drip… there goes a level. Sticky progress~"],
-	"goblin_girl": ["Hehe! Level drained! That's what you get for giving in!", "Poof — one level gone. Goblin tax~"],
-	"succubus":    ["Mmm… I just sipped a level from you. Delicious.", "Your growth thins as you break. One level, mine~"],
-	"kitsune":     ["A fox takes what you offer. One level, plucked.", "Gave in? Then forfeit a level. Fair play~"],
-	"troll_girl":  ["YOU GIVE UP. I TAKE LEVEL.", "Level gone. Weakness has a price."],
-	"dragoness":   ["A dragoness claims tribute — one level from your path.", "Surrender feeds the hoard. Your level thins."],
+	"slime_girl": [
+		"[drain]Feel that? I'm melting a whole level out of you~[/drain]",
+		"[drip]Drip… drip…[/drip] [drain]there goes a level. Sticky progress~[/drain]",
+	],
+	"goblin_girl": [
+		"[laugh]Hehe! Level drained![/laugh] [threat]That's what you get for giving in![/threat]",
+		"[giggle]Poof — one level gone. Goblin tax~[/giggle]",
+	],
+	"succubus": [
+		"[moan]Mmm… I just sipped a level from you.[/moan] [velvet]Delicious.[/velvet]",
+		"[drain]Your growth thins as you break. One level, mine~[/drain]",
+	],
+	"kitsune": [
+		"[sly]A fox takes what you offer.[/sly] [drain]One level, plucked.[/drain]",
+		"[tease]Gave in? Then forfeit a level. Fair play~[/tease]",
+	],
+	"troll_girl": [
+		"[shout]YOU GIVE UP. I TAKE LEVEL.[/shout]",
+		"[blunt]Level gone. Weakness has a price.[/blunt]",
+	],
+	"dragoness": [
+		"[queen]A dragoness claims tribute[/queen] — [drain]one level from your path.[/drain]",
+		"[drain]Surrender feeds the hoard. Your level thins.[/drain]",
+	],
 }
 
 static func rematch_greeting(enemy_id: String, last_result: String) -> String:

@@ -47,6 +47,7 @@ class EnemyData:
 	var xp:            int
 	var gold:          int
 	var lines:         Dictionary
+	var last_line:     String = ""
 
 	func _init(p_name, p_max_hp, p_dmg, p_beats, p_bpm, p_xp, p_gold, p_lines):
 		name = p_name; max_health = p_max_hp; damage = p_dmg
@@ -55,7 +56,18 @@ class EnemyData:
 
 	func get_line(situation: String) -> String:
 		var pool = lines.get(situation, [])
-		return "" if pool.is_empty() else pool[randi() % pool.size()]
+		if pool.is_empty():
+			return ""
+		var choices: Array = []
+		for raw in pool:
+			var line := str(raw)
+			if line != last_line:
+				choices.append(line)
+		if choices.is_empty():
+			return ""
+		var pick: String = str(choices[randi() % choices.size()])
+		last_line = pick
+		return pick
 
 # ── Enemy Definitions ─────────────────────────────────────────────────────────
 # Alpha roster: goblin (fast, weak) and troll (slow, hard-hitting).
@@ -70,62 +82,235 @@ var ENEMY_DATA: Dictionary = {}
 func _build_enemies():
 	# ── Tier 1: weak / early ──────────────────────────────────────────────────
 	ENEMY_DATA["slime_girl"] = EnemyData.new("slime_girl", 28, 5, 20, 120.0, 25, 10, {
-		"taunt":            ["Ooh, your rhythm is all sticky~", "Slippery beats for a slippery boy~", "Don't melt for me yet..."],
-		"player_near_death":["You're dripping... almost done?", "One more and you'll be mine~", "Your hands are shaking so cute~"],
-		"player_defeated":  ["Aww, you fell already? Keep tapping or I'll keep you~", "Down already? Prove you can still hold on~"],
-		"near_win":         ["Nngh— you hit hard for a soft boy~", "That actually stung... interesting."],
-		"survive_loss":     ["Tch. You held out. Fine, take the loot.", "You resisted a slime? Annoying..."],
-		"losing":           ["You admit it? Good boy. Now feel the beat until you break.", "Gave up already? I'll make sure you remember this."],
-		"gameover_remarks": ["Even a slime made you lose control~", "Come back when you can last longer, softie."],
+		"taunt": [
+			"[drip]Ooh, your rhythm's all sticky already~[/drip]",
+			"[tease]Slippery beats for a slippery boy~[/tease]",
+			"[clingy]Don't melt yet… I want to savor the drip.[/clingy]",
+			"[gooey]Hug the beat. I'll hug you harder.[/gooey]",
+			"[lick]You're warm.[/lick]",
+			"[whisper]Don't pull away.[/whisper]",
+		],
+		"player_near_death": [
+			"[pant]You're dripping…[/pant] [hot]almost done?[/hot]",
+			"[heart]One more squeeze and you'll be mine~[/heart]",
+			"[moan]Your hands are shaking so cute~[/moan]",
+			"[drip]Leak for me. Just a little. Then a lot.[/drip]",
+			"[clingy]I can feel your pulse through the gel.[/clingy]",
+		],
+		"player_defeated": [
+			"[sweet]Aww, you fell already?[/sweet] [command]Keep tapping or I'll keep you~[/command]",
+			"[tease]Down already? Prove you can still hold on~[/tease]",
+			"[gooey]Floor feels nice, doesn't it? Sticky boy.[/gooey]",
+		],
+		"near_win": [
+			"[pant]Nngh—[/pant] you hit hard for a [prey]soft boy[/prey]~",
+			"[growl]That actually stung… interesting.[/growl]",
+			"[tease]Ooh. Rough. Do it again.[/tease]",
+		],
+		"survive_loss": [
+			"[threat]Tch. You held out.[/threat] Fine — take the loot.",
+			"[hiss]You resisted a slime?[/hiss] Annoying… and hot.",
+		],
+		"losing": [
+			"[command]You admit it? Good boy.[/command] [drain]Feel the beat until you break.[/drain]",
+			"[clingy]Gave up already?[/clingy] [drain]I'll make sure you remember the squeeze.[/drain]",
+		],
+		"gameover_remarks": [
+			"[drip]Even a slime made you lose control~[/drip]",
+			"[tease]Come back when you can last longer, softie.[/tease]",
+			"[moan]Mmm. Sticky defeat tastes sweet.[/moan]",
+		],
 	})
 	ENEMY_DATA["goblin_girl"] = EnemyData.new("goblin_girl", 40, 8, 22, 135.0, 40, 15, {
-		"taunt":            ["Hehe, too slow!", "Can't keep up, can ya?", "My grandma taps faster than that!"],
-		"player_near_death":["One more and you're DONE!", "I can smell how close you are~", "Just give in already!"],
-		"player_defeated":  ["Hah! Knocked you flat! Tap fast or you're finished!", "Down you go, loser~"],
-		"near_win":         ["Ow ow... lucky hit!", "That tickled! (It didn't)"],
-		"survive_loss":     ["Ugh, fine... take your stupid gold.", "You survived? Annoying little thing."],
-		"losing":           ["You SAID you lost! Good. Now suffer the beat.", "Can't handle the rhythm? Pathetic~"],
-		"gameover_remarks": ["Even a goblin girl broke you!", "That's how a goblin makes an adventurer beg."],
+		"taunt": [
+			"[giggle]Hehe, too slow![/giggle]",
+			"[brat]Can't keep up, can ya?[/brat]",
+			"[laugh]My grandma taps faster than that![/laugh]",
+			"[punk]Look at you struggling — pathetic and cute.[/punk]",
+			"[foot]Look at these toes~ twitching yet?[/foot]",
+			"[hyper]Keep up or shut up.[/hyper]",
+		],
+		"player_near_death": [
+			"[shout]One more and you're DONE![/shout]",
+			"[hot]I can smell how close you are~[/hot]",
+			"[command]Just give in already, softie![/command]",
+			"[brat]Spurt. I dare you.[/brat]",
+		],
+		"player_defeated": [
+			"[laugh]Hah! Knocked you flat![/laugh] [fast]Tap fast or you're finished![/fast]",
+			"[tease]Down you go, loser~[/tease]",
+			"[punk]On the floor already? Beg with your hips.[/punk]",
+		],
+		"near_win": [
+			"[harsh]Ow ow… lucky hit![/harsh]",
+			"[giggle]That tickled![/giggle] [mute](It didn't.)[/mute]",
+			"[brat]Hey! Rude![/brat]",
+		],
+		"survive_loss": [
+			"[threat]Ugh, fine…[/threat] take your stupid gold.",
+			"[growl]You survived? Annoying little thing.[/growl]",
+		],
+		"losing": [
+			"[shout]You SAID you lost![/shout] [drain]Good. Now suffer the beat.[/drain]",
+			"[tease]Can't handle the rhythm?[/tease] [threat]Pathetic~[/threat]",
+		],
+		"gameover_remarks": [
+			"[laugh]Even a goblin girl broke you![/laugh]",
+			"[command]That's how a goblin makes an adventurer beg.[/command]",
+			"[foot]Remember my soles next time you get hard.[/foot]",
+		],
 	})
-
-	# ── Tier 2: mid ───────────────────────────────────────────────────────────
 	ENEMY_DATA["succubus"] = EnemyData.new("succubus", 55, 11, 16, 125.0, 65, 25, {
-		"taunt":            ["Feel that pulse? It's matching your heartbeat~", "I can already taste how desperate you are.", "Dance for me, little hero."],
-		"player_near_death":["You're throbbing in time with me~", "So close... just let go.", "Your resolve is melting so prettily."],
-		"player_defeated":  ["Fallen already? Keep the rhythm or I'll claim you fully~", "On your knees. Tap if you still can."],
-		"near_win":         ["Mmm... you actually hurt me. How rude.", "That fire in you is delicious."],
-		"survive_loss":     ["You held back from a succubus? Impressive... and frustrating.", "Fine. Leave with your prize. For now."],
-		"losing":           ["You admitted defeat. Perfect. Now feel every beat until you break.", "Good boy. The guild will hear how easily you folded."],
-		"gameover_remarks": ["Another soul who couldn't last~", "Come back when you're ready to serve properly."],
+		"taunt": [
+			"[velvet]Feel that pulse?[/velvet] [heart]It's matching your heartbeat~[/heart]",
+			"[lick]I can already taste how desperate you are.[/lick]",
+			"[command]Dance for me,[/command] [prey]little hero.[/prey]",
+			"[predator]Don't look away. I want to watch you unravel.[/predator]",
+			"[whisper]I don't need to rush you.[/whisper]",
+		],
+		"player_near_death": [
+			"[moan]You're throbbing in time with me~[/moan]",
+			"[slow]So close…[/slow] [hot]just let go.[/hot]",
+			"[sweet]Your resolve is melting so prettily.[/sweet]",
+			"[velvet]Whisper it. Tell me you're going to spill.[/velvet]",
+		],
+		"player_defeated": [
+			"[tease]Fallen already?[/tease] [command]Keep the rhythm or I'll claim you fully~[/command]",
+			"[queen]On your knees.[/queen] [pant]Tap if you still can.[/pant]",
+			"[predator]Good. Broken looks good on you.[/predator]",
+		],
+		"near_win": [
+			"[purr]Mmm…[/purr] you actually hurt me. [harsh]How rude.[/harsh]",
+			"[hot]That fire in you is delicious.[/hot]",
+			"[velvet]Interesting. Most fold quieter.[/velvet]",
+		],
+		"survive_loss": [
+			"[threat]You held back from a succubus?[/threat] Impressive… and frustrating.",
+			"[soft]Fine. Leave with your prize.[/soft] [echo]For now.[/echo]",
+		],
+		"losing": [
+			"[command]You admitted defeat. Perfect.[/command] [drain]Feel every beat until you break.[/drain]",
+			"[prey]Good boy.[/prey] [drain]The guild will hear how easily you folded.[/drain]",
+		],
+		"gameover_remarks": [
+			"[drain]Another soul who couldn't last~[/drain]",
+			"[command]Come back when you're ready to serve properly.[/command]",
+			"[velvet]I'll be tasting that loss for days.[/velvet]",
+		],
 	})
 	ENEMY_DATA["kitsune"] = EnemyData.new("kitsune", 65, 12, 14, 115.0, 80, 30, {
-		"taunt":            ["Nine tails, one rhythm. Keep up~", "Your ears are turning red already.", "Foxes play with their food, you know."],
-		"player_near_death":["You're trembling. Adorable.", "One more push and you'll be mine~", "The beat owns you now."],
-		"player_defeated":  ["Collapsed so soon? Prove you can still resist.", "Down already? The tails are disappointed."],
-		"near_win":         ["Oh? A scratch. How bold of you.", "You're stronger than you look... interesting."],
-		"survive_loss":     ["You endured the fox. Rare. Take the loot and go.", "Hmph. You win this round."],
-		"losing":           ["You gave in. Good. Now the beat will finish what I started.", "Admitted weakness already? The guild will love this report."],
-		"gameover_remarks": ["Even a kitsune outlasted you~", "Next time, try not to fold so quickly."],
+		"taunt": [
+			"[sly]Nine tails, one rhythm. Keep up~[/sly]",
+			"[giggle]Your ears are turning red already.[/giggle]",
+			"[purr]Foxes play with their food, you know.[/purr]",
+			"[smug]Miss a beat and I'll make it embarrassing.[/smug]",
+			"[tease]Pink ears already? Foxes notice everything.[/tease]",
+		],
+		"player_near_death": [
+			"[sweet]You're trembling. Adorable.[/sweet]",
+			"[heart]One more push and you'll be mine~[/heart]",
+			"[command]The beat owns you now.[/command]",
+			"[sly]Pride first… puddle second. Almost there.[/sly]",
+		],
+		"player_defeated": [
+			"[tease]Collapsed so soon?[/tease] [focus]Prove you can still resist.[/focus]",
+			"[whisper]Down already? The tails are disappointed.[/whisper]",
+			"[command]Look at me when you shake.[/command]",
+		],
+		"near_win": [
+			"[giggle]Oh? A scratch.[/giggle] How bold of you.",
+			"[purr]You're stronger than you look…[/purr] interesting.",
+			"[smug]Hah. Clever prey.[/smug]",
+		],
+		"survive_loss": [
+			"[threat]You endured the fox. Rare.[/threat] Take the loot and go.",
+			"[hiss]Hmph.[/hiss] You win this round.",
+		],
+		"losing": [
+			"[command]You gave in. Good.[/command] [drain]Now the beat will finish what I started.[/drain]",
+			"[tease]Admitted weakness already?[/tease] [drain]The guild will love this report.[/drain]",
+		],
+		"gameover_remarks": [
+			"[tease]Even a kitsune outlasted you~[/tease]",
+			"[soft]Next time, try not to fold so quickly.[/soft]",
+			"[sly]Tails remember every blush.[/sly]",
+		],
 	})
-
-	# ── Tier 3: strong / late ─────────────────────────────────────────────────
 	ENEMY_DATA["troll_girl"] = EnemyData.new("troll_girl", 85, 15, 10, 90.0, 110, 40, {
-		"taunt":            ["TROLL GIRL SMASH RHYTHM.", "You think you can keep up? I doubt it.", "Boom. Boom. Boom. Feel it."],
-		"player_near_death":["ONE MORE. I FINISH THIS.", "Your hands shake. I can see it.", "Almost. I am patient."],
-		"player_defeated":  ["You fall. Not surprised. Tap fast if you still can.", "Down already? One chance. Use it."],
-		"near_win":         ["...Felt that.", "You are stronger than I thought."],
-		"survive_loss":     ["Hmph. Fine. Leave now.", "You live. This time. I am disappointed."],
-		"losing":           ["You admit weakness? Good. Now suffer the maximum drum.", "You said it. Prepare to break."],
-		"gameover_remarks": ["Troll girl wins. Think about what you did.", "Even the slowest beat broke you."],
+		"taunt": [
+			"[shout]TROLL GIRL SMASH RHYTHM.[/shout]",
+			"[growl]You think you can keep up? I doubt it.[/growl]",
+			"[big]Boom. Boom. Boom.[/big] [focus]Feel it in your bones.[/focus]",
+			"[blunt]Look up when you speak to me.[/blunt]",
+			"[giantess]You are small.[/giantess]",
+		],
+		"player_near_death": [
+			"[shout]ONE MORE. I FINISH THIS.[/shout]",
+			"[harsh]Your hands shake.[/harsh] I see it.",
+			"[slow]Almost.[/slow] I am patient.",
+			"[blunt]Cum if you must. I will watch.[/blunt]",
+		],
+		"player_defeated": [
+			"[growl]You fall. Not surprised.[/growl] [fast]Tap fast if you still can.[/fast]",
+			"[command]Down already? One chance. Use it.[/command]",
+			"[blunt]Small body. Loud surrender. Good.[/blunt]",
+		],
+		"near_win": [
+			"[harsh]...Felt that.[/harsh]",
+			"[growl]You are stronger than I thought.[/growl]",
+			"[blunt]Hmm. Worth keeping.[/blunt]",
+		],
+		"survive_loss": [
+			"[threat]Hmph. Fine. Leave now.[/threat]",
+			"[growl]You live. This time.[/growl] I am disappointed.",
+		],
+		"losing": [
+			"[command]You admit weakness? Good.[/command] [drain]Now suffer the maximum drum.[/drain]",
+			"[shout]You said it.[/shout] [threat]Prepare to break.[/threat]",
+		],
+		"gameover_remarks": [
+			"[focus]Troll girl wins.[/focus] Think about what you did.",
+			"[drain]Even the slowest beat broke you.[/drain]",
+			"[giantess]Next time, last longer under me.[/giantess]",
+		],
 	})
 	ENEMY_DATA["dragoness"] = EnemyData.new("dragoness", 110, 18, 8, 80.0, 150, 55, {
-		"taunt":            ["A dragoness does not rush. The beat will claim you.", "Kneel to the rhythm, little treasure-hunter.", "Your heat rises with every pulse~"],
-		"player_near_death":["You are burning. Good.", "One more and you belong to me.", "The fire in your body betrays you."],
-		"player_defeated":  ["Fallen before a dragoness. Keep the beat or be claimed.", "On the ground already? Prove your will."],
-		"near_win":         ["You dared strike a dragoness... bold.", "That heat of yours is interesting."],
-		"survive_loss":     ["You endured me. Rare. Take your spoils and leave my domain.", "Hmph. You may go... for now."],
-		"losing":           ["You surrendered. Perfect. The beat will finish you.", "The guild will know how quickly their hunter broke."],
-		"gameover_remarks": ["A dragoness always collects what is hers.", "Return when you can last longer than a few measures."],
+		"taunt": [
+			"[queen]A dragoness does not rush.[/queen] [echo]The beat will claim you.[/echo]",
+			"[command]Kneel to the rhythm,[/command] [prey]little treasure-hunter.[/prey]",
+			"[hot]Your heat rises with every pulse~[/hot]",
+			"[regal]Do not waste my time. Burn properly.[/regal]",
+			"[possessive]A hunter in my den.[/possessive]",
+		],
+		"player_near_death": [
+			"[hot]You are burning.[/hot] [queen]Good.[/queen]",
+			"[heart]One more and you belong to me.[/heart]",
+			"[hot]The fire in your body betrays you.[/hot]",
+			"[regal]Spill for your queen. Or prove you won't.[/regal]",
+		],
+		"player_defeated": [
+			"[queen]Fallen before a dragoness.[/queen] [command]Keep the beat or be claimed.[/command]",
+			"[threat]On the ground already?[/threat] Prove your will.",
+			"[possessive]Treasure at my feet. Fitting.[/possessive]",
+		],
+		"near_win": [
+			"[harsh]You dared strike a dragoness…[/harsh] bold.",
+			"[purr]That heat of yours is interesting.[/purr]",
+			"[regal]Rare. Do not make me respect you.[/regal]",
+		],
+		"survive_loss": [
+			"[queen]You endured me. Rare.[/queen] Take your spoils and leave my domain.",
+			"[echo]Hmph. You may go… for now.[/echo]",
+		],
+		"losing": [
+			"[command]You surrendered. Perfect.[/command] [drain]The beat will finish you.[/drain]",
+			"[drain]The guild will know how quickly their hunter broke.[/drain]",
+		],
+		"gameover_remarks": [
+			"[queen]A dragoness always collects what is hers.[/queen]",
+			"[soft]Return when you can last longer than a few measures.[/soft]",
+			"[possessive]Your loss feeds the hoard.[/possessive]",
+		],
 	})
 
 # ── Player Stats ──────────────────────────────────────────────────────────────
@@ -190,7 +375,7 @@ signal enemy_state_changed(state: String)   # "idle", "attack", "hurt" — drive
 signal enemy_type_swapped(type_name: String)
 signal player_stats_changed()
 signal enemy_hp_changed()
-signal enemy_dialogue(text: String)
+signal enemy_dialogue(text: String, situation: String)
 signal enemy_defeated(gold_reward: int)
 signal enter_punishment(enemy_name: String)
 signal punishment_tick(seconds_left: float)
@@ -374,7 +559,7 @@ func _maybe_say_dialogue():
 		var line = active_enemy.get_line(situation)
 		if line != "":
 			_last_dialogue_beat = _total_beats_fired
-			emit_signal("enemy_dialogue", line)
+			emit_signal("enemy_dialogue", line, situation)
 
 # ── Turn Resolution ───────────────────────────────────────────────────────────
 # Damage is applied at end-of-turn, not per-beat. This is intentional alpha
@@ -411,7 +596,7 @@ func _on_player_defeated():
 	emit_signal("survival_progress", survival_beats_left, SURVIVAL_BEATS_REQUIRED)
 	var line = active_enemy.get_line("player_defeated")
 	if line != "":
-		emit_signal("enemy_dialogue", line)
+		emit_signal("enemy_dialogue", line, "player_defeated")
 	emit_signal("enter_survival", active_enemy_type)
 
 func _on_survival_success():
@@ -425,7 +610,7 @@ func _on_survival_success():
 	generator_beats_count = 0
 	generator_turn        = Turn.ENEMY
 	process_turn          = Turn.ENEMY
-	emit_signal("enemy_dialogue", active_enemy.get_line("survive_loss"))
+	emit_signal("enemy_dialogue", active_enemy.get_line("survive_loss"), "survive_loss")
 	emit_signal("enemy_hp_changed")  # triggers enemy bar redraw after card reappears
 	emit_signal("survival_success")
 
@@ -491,13 +676,13 @@ func on_player_concedes():
 	generator_last_time   = game_time
 	generator_beats_count = 0
 	generator_turn        = Turn.ENEMY
-	emit_signal("enemy_dialogue", active_enemy.get_line("losing"))
+	emit_signal("enemy_dialogue", active_enemy.get_line("losing"), "losing")
 	emit_signal("enter_punishment", active_enemy_type)
 
 func _trigger_game_over():
 	game_state = GameState.GAMEOVER
 	set_process(false)
-	emit_signal("enemy_dialogue", active_enemy.get_line("gameover_remarks"))
+	emit_signal("enemy_dialogue", active_enemy.get_line("gameover_remarks"), "gameover_remarks")
 	emit_signal("game_over", active_enemy_type)
 
 # ── BeatBar Adapter ───────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ extends Node
 # Hooks Main scene without requiring Main.gd edits.
 
 var _survival_hint: Label = null
+var _drain_banner: RichTextLabel = null
 var _hooked_main: Node = null
 
 func _ready() -> void:
@@ -29,6 +30,7 @@ func _try_hook(n: Node) -> void:
 	_hooked_main = n
 	_hide_icons(n)
 	_ensure_hint(ui)
+	_ensure_drain_banner(ui)
 	if not gm.enter_survival.is_connected(_on_enter_survival):
 		gm.enter_survival.connect(_on_enter_survival)
 	if not gm.survival_success.is_connected(_on_survival_success):
@@ -86,22 +88,53 @@ func _on_survival_success() -> void:
 func _on_enter_punishment(_enemy_name: String) -> void:
 	if _survival_hint:
 		_survival_hint.visible = false
+	if _drain_banner:
+		_drain_banner.visible = true
 
 func _on_loser() -> void:
 	if _survival_hint:
 		_survival_hint.visible = false
 
+func _ensure_drain_banner(ui: Node) -> void:
+	_drain_banner = ui.get_node_or_null("DrainBanner") as RichTextLabel
+	if _drain_banner:
+		_drain_banner.visible = false
+		return
+	_drain_banner = RichTextLabel.new()
+	_drain_banner.name = "DrainBanner"
+	_drain_banner.visible = false
+	_drain_banner.bbcode_enabled = true
+	_drain_banner.fit_content = true
+	_drain_banner.scroll_active = false
+	_drain_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_drain_banner.z_index = 90
+	_drain_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_drain_banner.anchor_left = 0.5
+	_drain_banner.anchor_right = 0.5
+	_drain_banner.offset_left = -360.0
+	_drain_banner.offset_right = 360.0
+	_drain_banner.offset_top = 88.0
+	_drain_banner.offset_bottom = 200.0
+	_drain_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_drain_banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_drain_banner.add_theme_font_size_override("normal_font_size", 22)
+	_drain_banner.add_theme_color_override("default_color", Color(1.0, 0.86, 1.0, 1.0))
+	ui.add_child(_drain_banner)
+
 func _on_level_drained(old_level: int, new_level: int, flavor: String) -> void:
 	if _hooked_main == null:
 		return
+	var parsed: Dictionary = SubtitleMarkup.expand(
+		"[shout]LEVEL DRAINED[/shout]\n[drain]LV %d → LV %d[/drain]\n%s" % [old_level, new_level, flavor],
+		"drain"
+	)
+	if _drain_banner:
+		_drain_banner.text = "[center]%s[/center]" % str(parsed.get("bbcode", flavor))
+		_drain_banner.visible = true
+		_drain_banner.modulate = Color(1, 1, 1, 1)
 	var bubble := _hooked_main.get_node_or_null("UI/DialogueBubble")
-	var label := _hooked_main.get_node_or_null("UI/DialogueBubble/MarginContainer/DialogueLabel") as Label
-	if label == null:
-		return
-	var msg := "LEVEL DRAINED — LV %d → LV %d" % [old_level, new_level]
-	if flavor != "":
-		msg = "%s\n%s" % [msg, flavor]
-	label.text = msg
-	if bubble:
-		bubble.visible = true
-		bubble.modulate = Color(1, 1, 1, 1)
+	if bubble and bubble.has_method("set_lane"):
+		bubble.set_lane("drain")
+	# Flavor line stays on the high lane so it does not cover the give-up button.
+	if bubble and bubble.has_method("show_line") and flavor != "":
+		bubble.show_line(flavor, "drain")

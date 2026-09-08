@@ -5,12 +5,12 @@ const TIER1 := ["slime_girl", "goblin_girl"]
 const TIER2 := ["succubus", "kitsune"]
 
 const LEVEL_DRAIN := {
-	"slime_girl": ["Feel that? I'm melting a whole level out of you~", "Drip… drip… there goes a level. Sticky progress~"],
-	"goblin_girl": ["Hehe! Level drained! That's what you get for giving in!", "Poof — one level gone. Goblin tax~"],
-	"succubus": ["Mmm… I just sipped a level from you. Delicious.", "Your growth thins as you break. One level, mine~"],
-	"kitsune": ["A fox takes what you offer. One level, plucked.", "Gave in? Then forfeit a level. Fair play~"],
-	"troll_girl": ["YOU GIVE UP. I TAKE LEVEL.", "Level gone. Weakness has a price."],
-	"dragoness": ["A dragoness claims tribute — one level from your path.", "Surrender feeds the hoard. Your level thins."],
+	"slime_girl": ["[drain]Feel that? I'm melting a whole level out of you~[/drain]", "[drip]Drip… drip…[/drip] [drain]there goes a level.[/drain]"],
+	"goblin_girl": ["[laugh]Hehe! Level drained![/laugh] That's what you get for giving in!", "[giggle]Poof — one level gone. Goblin tax~[/giggle]"],
+	"succubus": ["[moan]Mmm… I just sipped a level from you.[/moan] Delicious.", "[drain]Your growth thins as you break. One level, mine~[/drain]"],
+	"kitsune": ["[purr]A fox takes what you offer.[/purr] [drain]One level, plucked.[/drain]", "[tease]Gave in? Then forfeit a level. Fair play~[/tease]"],
+	"troll_girl": ["[shout]YOU GIVE UP. I TAKE LEVEL.[/shout]", "[growl]Level gone. Weakness has a price.[/growl]"],
+	"dragoness": ["[queen]A dragoness claims tribute[/queen] — [drain]one level from your path.[/drain]", "[drain]Surrender feeds the hoard. Your level thins.[/drain]"],
 }
 
 var _hooked: Dictionary = {}
@@ -90,7 +90,7 @@ func _on_swapped(type_name: String, gm: Node) -> void:
 		return
 	var line := EncounterLines.rematch_greeting(type_name, last)
 	if line != "":
-		gm.emit_signal("enemy_dialogue", line)
+		gm.emit_signal("enemy_dialogue", line, "rematch")
 
 func _on_won(_gold: int, gm: Node) -> void:
 	if MetaSave.has_method("set_enemy_last_result"):
@@ -105,15 +105,14 @@ func _on_lost(_enemy: String, gm: Node) -> void:
 	gm.player_max_health = MetaSave.base_max_health
 	gm.player_damage = MetaSave.base_damage
 	var new_lv := int(gm.player_level)
-	var pool: Array = LEVEL_DRAIN.get(str(gm.active_enemy_type), [])
-	var flavor := "She drains a level from you as you give in..."
-	if not pool.is_empty():
-		flavor = str(pool[randi() % pool.size()])
+	var flavor := EncounterLines.level_drain_line(str(gm.active_enemy_type))
+	if flavor == "":
+		flavor = "She drains a level from you as you give in..."
 	if gm.has_signal("level_drained"):
 		gm.emit_signal("level_drained", old_lv, new_lv, flavor)
 	var lose := ""
 	if gm.active_enemy and gm.active_enemy.has_method("get_line"):
 		lose = str(gm.active_enemy.get_line("losing"))
 	var msg := flavor if lose == "" else "%s\n%s" % [flavor, lose]
-	gm.emit_signal("enemy_dialogue", msg)
+	gm.emit_signal("enemy_dialogue", msg, "drain")
 	gm.emit_signal("player_stats_changed")

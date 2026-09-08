@@ -1,13 +1,16 @@
-[gd_scene format=3 uid="uid://chiyy37pq6psv"]
+[gd_scene load_steps=3 format=3 uid="uid://chiyy37pq6psv"]
 
 [ext_resource type="Theme" uid="uid://dc2ciocqsob3a" path="res://main_theme.tres" id="1_theme"]
+[ext_resource type="Script" path="res://scripts/TreasureScreen.gd" id="2_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
-bg_color = Color(0.05, 0.04, 0.04, 0.97)
+bg_color = Color(0.03, 0.02, 0.04, 0.32)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_btn"]
 
-[node name="TreasureScreen" type="PanelContainer" unique_id=670884745]
+[node name="TreasureScreen" type="PanelContainer"]
+visible = false
+z_index = 40
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -15,49 +18,84 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_theme")
 theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+script = ExtResource("2_script")
 
-[node name="MarginContainer" type="MarginContainer" parent="." unique_id=820819940]
+[node name="Root" type="Control" parent="."]
 layout_mode = 2
-theme_override_constants/margin_left = 80
-theme_override_constants/margin_top = 60
-theme_override_constants/margin_right = 80
-theme_override_constants/margin_bottom = 60
+mouse_filter = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=759265296]
-layout_mode = 2
-theme_override_constants/separation = 8
+[node name="DefeatedSprite" type="TextureRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 0.52
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_right = 12.0
+grow_horizontal = 0
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
 
-[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1148084669]
+[node name="UIColumn" type="VBoxContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_left = 48.0
+offset_top = 56.0
+offset_right = 430.0
+offset_bottom = -48.0
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="Root/UIColumn"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(1, 0.92, 0.96, 1)
+theme_override_font_sizes/font_size = 36
 text = "- TREASURE -"
 
-[node name="SubtitleLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1508785697]
+[node name="SubtitleLabel" type="Label" parent="Root/UIColumn"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
-theme_override_font_sizes/font_size = 13
-text = "You held out and claimed the spoils. Keep going — finish the quest without giving in."
+theme_override_colors/font_color = Color(0.82, 0.78, 0.84, 1)
+theme_override_font_sizes/font_size = 16
+text = "She is down. Catch your breath."
+autowrap_mode = 3
 
-[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer" unique_id=2089269455]
-custom_minimum_size = Vector2(0, 12)
+[node name="LootList" type="VBoxContainer" parent="Root/UIColumn"]
 layout_mode = 2
+theme_override_constants/separation = 2
 
-[node name="LootList" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=338382573]
-layout_mode = 2
-theme_override_constants/separation = 0
-
-[node name="SpringSpacer" type="Control" parent="MarginContainer/VBoxContainer" unique_id=2000692031]
+[node name="Spring" type="Control" parent="Root/UIColumn"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="ContinueButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=351240787]
+[node name="RestRow" type="HBoxContainer" parent="Root/UIColumn"]
+layout_mode = 2
+
+[node name="RestLabel" type="Label" parent="Root/UIColumn/RestRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.78, 0.88, 1)
+theme_override_font_sizes/font_size = 18
+text = "REST  8.0s"
+
+[node name="TimerBar" type="ColorRect" parent="Root/UIColumn"]
+custom_minimum_size = Vector2(280, 14)
+layout_mode = 2
+color = Color(0.12, 0.08, 0.12, 0.9)
+
+[node name="Fill" type="ColorRect" parent="Root/UIColumn/TimerBar"]
+layout_mode = 0
+offset_right = 280.0
+offset_bottom = 14.0
+color = Color(1, 0.72, 0.88, 0.95)
+
+[node name="ContinueButton" type="Button" parent="Root/UIColumn"]
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("StyleBoxEmpty_btn")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_btn")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_btn")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_btn")
-text = "Continue"
+text = "Skip rest"

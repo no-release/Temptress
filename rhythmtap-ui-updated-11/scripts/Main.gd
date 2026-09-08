@@ -20,14 +20,10 @@ var beat_sound:   AudioStreamPlayer
 @onready var player_hp_rail: Control = $UI/PlayerHpRail
 @onready var enemy_hp_rail: Control = $UI/EnemyHpRail
 @onready var dialogue_bubble: PanelContainer = $UI/DialogueBubble
-@onready var dialogue_label:  Label          = $UI/DialogueBubble/MarginContainer/DialogueLabel
 @onready var loser_button:    Button = $UI/LoserButton
 @onready var countdown_label: Label  = $UI/CountdownLabel
 @onready var treasure_screen: PanelContainer = $UI/TreasureScreen
-@onready var loot_list:       VBoxContainer  = $UI/TreasureScreen/MarginContainer/VBoxContainer/LootList
-@onready var continue_button: Button         = $UI/TreasureScreen/MarginContainer/VBoxContainer/ContinueButton
-var _dialogue_timer: float = 0.0
-const DIALOGUE_SHOW_SEC: float = 3.5
+@onready var beat_layer: CanvasLayer = $BeatLayer
 var _gold_display: float = 0.0
 var _gold_target:  float = 0.0
 var _tracked_player_hp: int = -1
@@ -55,7 +51,9 @@ func _ready():
 	loser_button.visible = false
 	loser_button.text = "I can't hold it..."
 	loser_button.pressed.connect(_on_loser_pressed)
-	continue_button.pressed.connect(_on_treasure_continue)
+	if treasure_screen and treasure_screen.has_signal("finished"):
+		if not treasure_screen.finished.is_connected(_on_treasure_continue):
+			treasure_screen.finished.connect(_on_treasure_continue)
 	game_manager.new_beat.connect(_on_new_beat)
 	game_manager.enemy_state_changed.connect(_on_enemy_state_changed)
 	game_manager.enemy_type_swapped.connect(_on_enemy_type_swapped)
@@ -152,11 +150,6 @@ func _update_enemy_hud():
 func _process(delta: float):
 	background.size = get_viewport().get_visible_rect().size
 	beat_bar.size = get_viewport().get_visible_rect().size
-	if _dialogue_timer > 0.0:
-		_dialogue_timer -= delta
-		dialogue_bubble.modulate.a = min(1.0, _dialogue_timer * 2.0)
-		if _dialogue_timer <= 0.0:
-			dialogue_bubble.visible = false
 	if not is_equal_approx(_gold_display, _gold_target):
 		var diff  = _gold_target - _gold_display
 		var speed = max(abs(diff) * 3.0, 10.0)
@@ -164,27 +157,30 @@ func _process(delta: float):
 		gold_label.text = "Gold: %d" % int(_gold_display)
 	pass
 
+func _set_beatbar_visible(show: bool) -> void:
+	if beat_layer:
+		beat_layer.visible = show
+	if beat_bar:
+		beat_bar.visible = show
+
 func _show_treasure_screen(gold_reward: int):
-	for child in loot_list.get_children():
-		child.queue_free()
-	var row = Label.new()
-	row.text = "%d Gold" % gold_reward
-	row.add_theme_font_size_override("font_size", 18)
-	row.add_theme_color_override("font_color", Color(1.0, 0.88, 0.2, 1))
-	loot_list.add_child(row)
+	_set_beatbar_visible(false)
+	if dialogue_bubble and dialogue_bubble.has_method("hide_now"):
+		dialogue_bubble.hide_now()
+	var bag_gold := 0
 	if ActiveRun.state:
-		var bag = Label.new()
-		bag.text = "Quest bag: %d Gold" % ActiveRun.state.treasure_bag_gold
-		bag.add_theme_font_size_override("font_size", 14)
-		bag.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
-		loot_list.add_child(bag)
-	var sep = HSeparator.new()
-	sep.add_theme_color_override("color", Color(1.0, 0.88, 0.2, 0.55))
-	loot_list.add_child(sep)
-	treasure_screen.visible = true
+		bag_gold = int(ActiveRun.state.treasure_bag_gold)
+	var enemy_id := ""
+	if game_manager:
+		enemy_id = str(game_manager.active_enemy_type)
+	if treasure_screen and treasure_screen.has_method("present"):
+		treasure_screen.present(enemy_id, gold_reward, bag_gold)
+	else:
+		treasure_screen.visible = true
 func _on_treasure_continue():
 	SoundGen.play_ui_click()
 	treasure_screen.visible = false
+	_set_beatbar_visible(true)
 	room_manager.advance_room()
 func _on_room_started(room: Dictionary):
 	var room_num = room_manager.get_room_number()
@@ -210,10 +206,10 @@ func _on_room_started(room: Dictionary):
 		"shop":
 			await _run_shop_room()
 func _show_simple_notice(text: String) -> void:
-	dialogue_label.text = text
-	_dialogue_timer = 1.5
-	dialogue_bubble.visible = true
-	dialogue_bubble.modulate = Color(1, 1, 1, 1)
+	if dialogue_bubble and dialogue_bubble.has_method("show_line"):
+		dialogue_bubble.show_line(text, "notice")
+	elif dialogue_bubble:
+		dialogue_bubble.visible = true
 func _on_run_complete():
 	if ActiveRun.state and not ActiveRun.state.conceded:
 		ActiveRun.mark_cleared()
@@ -233,21 +229,28 @@ func _on_enemy_type_swapped(type_name: String):
 	enemy_name_label.text = "- %s -" % pretty
 	if enemy_hp_rail and enemy_hp_rail.has_method("set_label"):
 		enemy_hp_rail.set_label(_side_enemy_label(pretty, type_name))
-func _on_enemy_dialogue(text: String):
+func _on_enemy_dialogue(text: String, situation: String = ""):
 	if text == "":
 		return
-	dialogue_label.text      = text
-	_dialogue_timer          = DIALOGUE_SHOW_SEC
-	dialogue_bubble.visible  = true
-	dialogue_bubble.modulate = Color(1, 1, 1, 1)
+	if dialogue_bubble and dialogue_bubble.has_method("show_line"):
+		dialogue_bubble.show_line(text, situation)
+	else:
+		dialogue_bubble.visible = true
+		dialogue_bubble.modulate = Color(1, 1, 1, 1)
 func _on_enemy_defeated(gold_reward: int):
 	_show_treasure_screen(gold_reward)
 func _on_enter_survival(_enemy_name: String):
 	loser_button.visible      = true
+	loser_button.z_index = 80
+	loser_button.move_to_front()
 	enemy_hp_rail.visible = false
+	if dialogue_bubble and dialogue_bubble.has_method("set_lane"):
+		dialogue_bubble.set_lane("survival")
 func _on_survival_success():
 	loser_button.visible      = false
 	enemy_hp_rail.visible = true
+	if dialogue_bubble and dialogue_bubble.has_method("set_lane"):
+		dialogue_bubble.set_lane("combat")
 	call_deferred("_force_enemy_bar_update")
 func _force_enemy_bar_update():
 	game_manager.emit_signal("enemy_hp_changed")
@@ -259,6 +262,8 @@ func _on_loser_pressed():
 	game_manager.on_player_concedes()
 func _on_enter_punishment(_enemy_name: String):
 	countdown_label.modulate = Color(1, 1, 1, 1)
+	if dialogue_bubble and dialogue_bubble.has_method("set_lane"):
+		dialogue_bubble.set_lane("drain")
 	_update_player_hud()
 func _on_punishment_tick(seconds_left: float):
 	countdown_label.text = str(int(ceil(seconds_left)))

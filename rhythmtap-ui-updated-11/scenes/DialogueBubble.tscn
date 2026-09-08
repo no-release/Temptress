@@ -1,31 +1,86 @@
 [gd_scene format=3 uid="uid://b16bxam81msdy"]
 
-[ext_resource type="Theme" uid="uid://dc2ciocqsob3a" path="res://main_theme.tres" id="1_theme"]
+[ext_resource type="Script" path="res://scripts/CombatSubtitle.gd" id="2_sub"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bubble"]
-bg_color = Color(0.96, 0.96, 0.96, 0.96)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_subtitle"]
+bg_color = Color(0.04, 0.03, 0.07, 0.62)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.64, 0.9, 0.22)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 8
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
 
-[node name="DialogueBubble" type="PanelContainer" unique_id=1522276326]
+[node name="DialogueBubble" type="PanelContainer"]
+visible = false
 modulate = Color(1, 1, 1, 0)
-custom_minimum_size = Vector2(280, 62)
-theme = ExtResource("1_theme")
-theme_override_styles/panel = SubResource("StyleBoxFlat_bubble")
+z_index = 20
+custom_minimum_size = Vector2(640, 42)
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -320.0
+offset_top = -160.0
+offset_right = 320.0
+offset_bottom = -118.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_subtitle")
+script = ExtResource("2_sub")
 
-[node name="MarginContainer" type="MarginContainer" parent="." unique_id=515538568]
+[node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 2
-theme_override_constants/margin_left = 10
+mouse_filter = 2
+theme_override_constants/margin_left = 18
 theme_override_constants/margin_top = 6
-theme_override_constants/margin_right = 10
+theme_override_constants/margin_right = 18
 theme_override_constants/margin_bottom = 6
 
-[node name="DialogueLabel" type="Label" parent="MarginContainer" unique_id=172653604]
-custom_minimum_size = Vector2(300, 0)
+[node name="VBox" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.05, 0.05, 0.05, 1)
-theme_override_font_sizes/font_size = 16
-text = "This is the default test label"
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Speaker" type="Label" parent="Margin/VBox"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.72, 0.88, 0.92)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 13
+text = "ENEMY"
+horizontal_alignment = 1
+
+[node name="Body" type="RichTextLabel" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 0.96, 0.98, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_constants/shadow_outline_size = 4
+theme_override_font_sizes/normal_font_size = 20
+theme_override_font_sizes/bold_font_size = 20
+theme_override_font_sizes/italics_font_size = 20
+theme_override_font_sizes/bold_italics_font_size = 20
+bbcode_enabled = true
+text = ""
+fit_content = true
+scroll_active = false
 autowrap_mode = 3
+horizontal_alignment = 1
+vertical_alignment = 1

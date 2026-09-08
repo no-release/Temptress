@@ -150,29 +150,32 @@ grow_vertical = 2
 
 [node name="DialogueBubble" parent="UI" unique_id=1895707352 instance=ExtResource("7_dialogue")]
 visible = false
-anchors_preset = 2
-
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 70.0
-offset_top = -250.0
-offset_right = 400.0
-offset_bottom = -120.0
-grow_horizontal = 0
-grow_vertical = 0
-
-[node name="LoserButton" type="Button" parent="UI" unique_id=659240093]
-visible = false
+z_index = 20
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -130.0
-offset_top = -155.0
-offset_right = 130.0
-offset_bottom = -103.0
-grow_horizontal = 2
+offset_left = -320.0
+offset_top = -160.0
+offset_right = 320.0
+offset_bottom = -118.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="LoserButton" type="Button" parent="UI" unique_id=659240093]
+visible = false
+z_index = 80
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -168.0
+offset_right = -44.0
+offset_bottom = -116.0
+grow_horizontal = 0
 grow_vertical = 0
 theme = ExtResource("2_vcsgt")
 theme_override_colors/font_color = Color(1, 1, 1, 1)
