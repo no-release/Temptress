@@ -105,7 +105,7 @@ static func ensure_offers() -> Array:
 	var need := MetaSave.board_offer_count()
 	var offers := load_offers()
 	if offers.size() > need:
-	offers = offers.slice(0, need)
+		offers = offers.slice(0, need)
 	var seen := _seen_from(offers)
 	_append_unique(offers, seen, need)
 	persist_offers(offers)

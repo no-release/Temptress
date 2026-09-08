@@ -89,7 +89,7 @@ func _draw():
 			draw_circle(Vector2(bx, cy), radius + 9.0, Color(beat_color.r, beat_color.g, beat_color.b, proximity * 0.15))
 			draw_circle(Vector2(bx, cy), radius, beat_color)
 			if accent >= 2:
-				var tick := 3.0 + proximity * 4.0
+				var tick :float= 3.0 + proximity * 4.0
 				draw_line(Vector2(bx, cy - tick - 6.0), Vector2(bx, cy - tick), beat_color, 2.0)
 	if impact_alpha > 0.0:
 		draw_circle(Vector2(cx, cy), 22.0 * impact_scale, Color(COLOR_IMPACT.r, COLOR_IMPACT.g, COLOR_IMPACT.b, impact_alpha * 0.6))

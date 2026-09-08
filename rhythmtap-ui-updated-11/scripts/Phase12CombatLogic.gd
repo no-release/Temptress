@@ -88,9 +88,7 @@ func _on_swapped(type_name: String, gm: Node) -> void:
 		last = str(MetaSave.get_enemy_last_result(type_name))
 	if last != "won" and last != "lost":
 		return
-	var line := ""
-	if EncounterLines and EncounterLines.has_method("rematch_greeting"):
-		line = str(EncounterLines.rematch_greeting(type_name, last))
+	var line := EncounterLines.rematch_greeting(type_name, last)
 	if line != "":
 		gm.emit_signal("enemy_dialogue", line)
 
