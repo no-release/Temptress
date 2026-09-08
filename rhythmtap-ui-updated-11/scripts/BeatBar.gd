@@ -1,9 +1,10 @@
 extends Control
-# BeatBar.gd — Phase 12 pattern accents (tap accuracy still stubbed)
+# BeatBar.gd — smooth approach track (own CanvasLayer; never shaken)
+# Notes glide from screen edges toward the center hit line every frame.
 
-const LOOKAHEAD: float = 1.5
+const LOOKAHEAD: float = 2.25
 const TRACK_BOTTOM_MARGIN: float = 48.0
-const TRACK_HEIGHT: float = 54.0
+const TRACK_HEIGHT: float = 58.0
 
 var game_manager: Node = null
 var impact_alpha: float = 0.0
@@ -14,82 +15,105 @@ const COLOR_BEAT_CLOSE = Color(0.4, 0.002, 0.634, 1.0)
 const COLOR_ACCENT     = Color(1.0, 0.85, 0.35, 1.0)
 const COLOR_GHOST      = Color(0.55, 0.45, 0.75, 0.55)
 const COLOR_IMPACT     = Color(0.752, 0.0, 0.606, 1.0)
-const COLOR_TRACK_BG   = Color(0.0,  0.0,  0.0, 0.40)
-const COLOR_TRACK_LINE = Color(1.0,  1.0,  1.0, 0.14)
+const COLOR_TRACK_BG   = Color(0.0,  0.0,  0.0, 0.45)
+const COLOR_TRACK_LINE = Color(1.0,  1.0,  1.0, 0.18)
 
-func _ready():
+func _ready() -> void:
 	set_process(true)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fill_viewport()
 
-func on_beat():
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_VISIBILITY_CHANGED:
+		_fill_viewport()
+
+func _fill_viewport() -> void:
+	var vr := get_viewport().get_visible_rect().size
+	if vr.x > 1.0 and vr.y > 1.0:
+		set_anchors_preset(Control.PRESET_TOP_LEFT)
+		position = Vector2.ZERO
+		size = vr
+
+func on_beat() -> void:
 	impact_alpha = 1.0
-	impact_scale = 1.5
+	impact_scale = 1.45
 
-func _process(delta: float):
-	impact_alpha = max(0.0, impact_alpha - delta * 4.5)
-	impact_scale = lerp(impact_scale, 1.0, delta * 12.0)
+func _process(delta: float) -> void:
+	# Keep covering the viewport even if Main stops assigning size
+	if size.x < 8.0 or size.y < 8.0:
+		_fill_viewport()
+	impact_alpha = maxf(0.0, impact_alpha - delta * 4.5)
+	impact_scale = lerpf(impact_scale, 1.0, delta * 12.0)
 	queue_redraw()
 
-func _draw():
-	if not game_manager:
+func _draw() -> void:
+	if game_manager == null:
 		return
-	var w = size.x
-	var h = size.y
-	var cx = w / 2.0
-	var cy = h - TRACK_BOTTOM_MARGIN - (TRACK_HEIGHT / 2.0)
-	var rect_top = h - TRACK_BOTTOM_MARGIN - TRACK_HEIGHT
+	var w: float = size.x
+	var h: float = size.y
+	if w < 8.0 or h < 8.0:
+		var vr := get_viewport().get_visible_rect().size
+		w = vr.x
+		h = vr.y
+		if w < 8.0 or h < 8.0:
+			return
+	var cx: float = w * 0.5
+	var cy: float = h - TRACK_BOTTOM_MARGIN - (TRACK_HEIGHT * 0.5)
+	var rect_top: float = h - TRACK_BOTTOM_MARGIN - TRACK_HEIGHT
+
 	draw_rect(Rect2(0, rect_top, w, TRACK_HEIGHT), COLOR_TRACK_BG)
 	draw_line(Vector2(0, rect_top), Vector2(w, rect_top), COLOR_TRACK_LINE, 1.5)
 	draw_line(Vector2(0, rect_top + TRACK_HEIGHT), Vector2(w, rect_top + TRACK_HEIGHT), COLOR_TRACK_LINE, 1.5)
 	draw_line(Vector2(0, cy), Vector2(w, cy), COLOR_TRACK_LINE, 1.0)
-	var now = game_manager.game_time
+	draw_circle(Vector2(cx, cy), 6.0, Color(1, 1, 1, 0.4))
+	draw_line(Vector2(cx, rect_top + 4.0), Vector2(cx, rect_top + TRACK_HEIGHT - 4.0), Color(1, 1, 1, 0.35), 2.0)
+
+	var now: float = float(game_manager.game_time)
 	var upcoming: Array = []
-	if game_manager.has_method("get_next_beat_entries"):
-		upcoming = game_manager.get_next_beat_entries(12)
-	else:
-		var accents = game_manager.get_meta("p12_pattern_accents", [1]) if game_manager.has_meta("p12_pattern_accents") else [1]
-		var times = game_manager.get_next_beats(12)
+	if game_manager.has_method("get_next_beats"):
+		var times: Array = game_manager.get_next_beats(20)
+		var accents: Array = [1]
+		if game_manager.has_meta("p12_pattern_accents"):
+			accents = game_manager.get_meta("p12_pattern_accents")
+		if accents.is_empty():
+			accents = [1]
 		for i in range(times.size()):
-			var acc := 1
-			if accents.size() > 0:
-				acc = int(accents[i % accents.size()])
-			upcoming.append({"time": times[i], "accent": acc})
-	var style := 0
-	if "pattern_style" in game_manager:
-		style = int(game_manager.pattern_style)
-	elif game_manager.has_meta("p12_pattern_style"):
-		style = int(game_manager.get_meta("p12_pattern_style"))
+			upcoming.append({
+				"time": float(times[i]),
+				"accent": int(accents[i % accents.size()]),
+			})
+
+	# Always draw approach notes — do not drop accent 0 (that looked like a dead bar)
 	for entry in upcoming:
 		var bt: float = float(entry.get("time", 0.0))
 		var accent: int = int(entry.get("accent", 1))
-		var time_until = bt - now
-		if time_until < 0.0 or time_until > LOOKAHEAD:
+		var time_until: float = bt - now
+		if time_until > LOOKAHEAD or time_until < -0.05:
 			continue
-		if accent <= 0 and style < 1:
-			continue
-		var ratio     = time_until / LOOKAHEAD
-		var proximity = 1.0 - ratio
-		var lx = cx * (1.0 - ratio)
-		var rx = cx + cx * ratio
+		var clamped: float = clampf(time_until, 0.0, LOOKAHEAD)
+		var ratio: float = clamped / LOOKAHEAD  # 1 = far (edges), 0 = hit (center)
+		var proximity: float = 1.0 - ratio
+		var lx: float = cx * (1.0 - ratio)
+		var rx: float = cx + cx * ratio
+
 		var beat_color: Color
 		if accent >= 2:
-			beat_color = COLOR_ACCENT.lerp(COLOR_BEAT_CLOSE, pow(proximity, 2.0))
+			beat_color = COLOR_ACCENT.lerp(COLOR_BEAT_CLOSE, proximity * proximity)
 		elif accent <= 0:
-			beat_color = COLOR_GHOST.lerp(COLOR_BEAT_CLOSE, pow(proximity, 2.0) * 0.5)
+			beat_color = COLOR_GHOST.lerp(COLOR_BEAT_CLOSE, proximity * proximity * 0.45)
 		else:
-			beat_color = COLOR_BEAT.lerp(COLOR_BEAT_CLOSE, pow(proximity, 2.0))
-		var radius_base := 7.0
+			beat_color = COLOR_BEAT.lerp(COLOR_BEAT_CLOSE, proximity * proximity)
+
+		var radius_base: float = 8.0
 		if accent >= 2:
-			radius_base = 10.0
+			radius_base = 11.0
 		elif accent <= 0:
-			radius_base = 4.5
-		if style >= 2 and accent == 1:
-			radius_base = 6.0
-		var radius = lerp(radius_base, radius_base + 9.0, pow(proximity, 0.5))
+			radius_base = 5.5
+		var radius: float = lerpf(radius_base, radius_base + 10.0, sqrt(proximity))
+
 		for bx in [lx, rx]:
-			draw_circle(Vector2(bx, cy), radius + 9.0, Color(beat_color.r, beat_color.g, beat_color.b, proximity * 0.15))
+			draw_circle(Vector2(bx, cy), radius + 10.0, Color(beat_color.r, beat_color.g, beat_color.b, proximity * 0.18))
 			draw_circle(Vector2(bx, cy), radius, beat_color)
-			if accent >= 2:
-				var tick :float= 3.0 + proximity * 4.0
-				draw_line(Vector2(bx, cy - tick - 6.0), Vector2(bx, cy - tick), beat_color, 2.0)
+
 	if impact_alpha > 0.0:
-		draw_circle(Vector2(cx, cy), 22.0 * impact_scale, Color(COLOR_IMPACT.r, COLOR_IMPACT.g, COLOR_IMPACT.b, impact_alpha * 0.6))
+		draw_circle(Vector2(cx, cy), 24.0 * impact_scale, Color(COLOR_IMPACT.r, COLOR_IMPACT.g, COLOR_IMPACT.b, impact_alpha * 0.55))

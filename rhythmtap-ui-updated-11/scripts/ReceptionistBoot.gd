@@ -1,15 +1,15 @@
 extends Control
 # =============================================================================
-# ReceptionistBoot.gd -- Phase 10 guild-door boot (no Start)
-# =============================================================================
-# main_scene entry: walking through the guild door. First visit = contract VN
-# (typewriter + sign). Later boots = performance-aware greeting, then hub picks.
-# Reuses Phase 8 FirstMeetVN typewriter pattern.
+# ReceptionistBoot.gd -- guild-door boot VN + hub
+# Speaker plate above text box; body portrait on the right behind the box.
+# When greeting ends, textbox/plate hide and hub buttons remain.
 # =============================================================================
 
 const CHARS_PER_SEC := 42.0
+const DEFAULT_SPEAKER := "Receptionist"
 
 @onready var title_label: Label = $Margin/VBox/Title
+@onready var door_flavor: Label = $Margin/VBox/DoorFlavor
 @onready var name_label: Label = $Margin/VBox/NameLabel
 @onready var dialogue_label: Label = $Margin/VBox/TextBox/Margin/VBox/DialogueLabel
 @onready var text_box: PanelContainer = $Margin/VBox/TextBox
@@ -18,6 +18,7 @@ const CHARS_PER_SEC := 42.0
 @onready var guild_button: Button = $Margin/VBox/HubButtons/GuildButton
 @onready var home_button: Button = $Margin/VBox/HubButtons/HomeButton
 @onready var menu_button: Button = $Margin/VBox/HubButtons/MenuButton
+@onready var character: TextureRect = $CharacterSprite
 
 var _pages: PackedStringArray = []
 var _page_index: int = 0
@@ -30,12 +31,12 @@ var _is_contract: bool = false
 
 func _ready() -> void:
 	MusicDirector.stop()
-	name_label.text = "Receptionist"
 	hub_box.visible = false
 	guild_button.pressed.connect(_on_guild)
 	home_button.pressed.connect(_on_home)
 	menu_button.pressed.connect(_on_menu)
 	text_box.gui_input.connect(_on_text_box_gui_input)
+	_load_receptionist_portrait()
 	if not MetaSave.receptionist_contract_signed:
 		_is_contract = true
 		title_label.text = "- GUILD INDUCTION -"
@@ -50,9 +51,52 @@ func _ready() -> void:
 		_pages = PackedStringArray(["Receptionist: Welcome."])
 	_show_page(0)
 
+func _load_receptionist_portrait() -> void:
+	var emotion := "neutral"
+	match str(MetaSave.last_outcome):
+		"concede":
+			emotion = "cold"
+		"clear":
+			emotion = "approve"
+		_:
+			emotion = "neutral"
+	var candidates: Array[String] = [
+		"res://vn_portraits/receptionist_%s.png" % emotion,
+		"res://vn_portraits/receptionist_neutral.png",
+		"res://ui_art/character_placeholder.png",
+	]
+	for path in candidates:
+		if ResourceLoader.exists(path):
+			character.texture = load(path) as Texture2D
+			character.visible = true
+			return
+	character.visible = false
+
+func _split_speaker(page: String) -> Dictionary:
+	var speaker := DEFAULT_SPEAKER
+	var body := page
+	var colon := page.find(": ")
+	if colon > 0 and colon < 48:
+		var head := page.substr(0, colon).strip_edges()
+		var first_nl := page.find("\n")
+		if head.find("\n") < 0 and (first_nl < 0 or colon < first_nl):
+			speaker = head
+			body = page.substr(colon + 2)
+	body = body.replace(speaker + ": ", "")
+	body = body.replace(DEFAULT_SPEAKER + ": ", "")
+	return {"speaker": speaker, "body": body.strip_edges()}
+
 func _show_page(i: int) -> void:
 	_page_index = i
-	_full_text = String(_pages[i])
+	var parsed: Dictionary = _split_speaker(String(_pages[i]))
+	var speaker: String = str(parsed.get("speaker", DEFAULT_SPEAKER))
+	_full_text = str(parsed.get("body", ""))
+	text_box.visible = true
+	if speaker == "":
+		name_label.visible = false
+	else:
+		name_label.visible = true
+		name_label.text = speaker
 	_visible_chars = 0
 	_typing = true
 	_accum = 0.0
@@ -128,8 +172,11 @@ func _finish_vn() -> void:
 		MetaSave.save_to_disk()
 		get_tree().change_scene_to_file("res://scenes/GuildBoard.tscn")
 		return
-	# Return greeting done -- offer board / home (Town-like hub)
+	# Done talking — close VN chrome, keep hub
+	_typing = false
 	continue_hint.visible = false
+	name_label.visible = false
+	text_box.visible = false
 	text_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hub_box.visible = true
 	_finishing = false

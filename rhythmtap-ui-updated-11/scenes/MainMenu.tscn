@@ -3,7 +3,6 @@
 [ext_resource type="Script" path="res://scripts/MainMenu.gd" id="1_mm"]
 [ext_resource type="Texture2D" uid="uid://bjew2tl61p0og" path="res://bg_images/receptionbg.png" id="2_ow34m"]
 [ext_resource type="Theme" uid="uid://dc2ciocqsob3a" path="res://main_theme.tres" id="2_theme"]
-[ext_resource type="Texture2D" uid="uid://dlwypbdnjvswq" path="res://image8.png" id="4_l72w3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
 bg_color = Color(0.04, 0.03, 0.04, 1)
@@ -101,8 +100,3 @@ text = "- ALBUM -"
 layout_mode = 2
 size_flags_horizontal = 0
 text = "- OPTION -"
-
-[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1857776317]
-position = Vector2(772.7, 306.87408)
-scale = Vector2(0.4722656, 0.5002459)
-texture = ExtResource("4_l72w3")

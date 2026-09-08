@@ -34,6 +34,7 @@ const NEUTRAL := [
 ]
 
 func _ready() -> void:
+	MusicDirector.play("town")
 	guild_button.pressed.connect(_on_guild)
 	home_button.pressed.connect(_on_home)
 	pay_button.pressed.connect(_on_pay_fine)

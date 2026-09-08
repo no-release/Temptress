@@ -13,6 +13,7 @@ extends Control
 @onready var option_button:   Button = $MarginContainer/VBoxContainer/MenuList/Option
 
 func _ready():
+	MusicDirector.play("menu")
 	start_button.pressed.connect(_on_start_pressed)
 	tutorial_button.pressed.connect(_on_tutorial_pressed)
 	album_button.pressed.connect(_on_album_pressed)

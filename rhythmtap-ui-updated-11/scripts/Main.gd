@@ -17,6 +17,14 @@ var beat_sound:   AudioStreamPlayer
 @onready var enemy_name_label:  Label     = $UI/EnemyCardAnchor/EnemyCard/MarginContainer/VBoxContainer/EnemyNameLabel
 @onready var enemy_hp_bar_fill: ColorRect = $UI/EnemyCardAnchor/EnemyCard/MarginContainer/VBoxContainer/HPRow/EnemyHPBarBg/EnemyHPBarFill
 @onready var enemy_atk_label:   Label     = $UI/EnemyCardAnchor/EnemyCard/MarginContainer/VBoxContainer/EnemyAtkLabel
+@onready var player_hp_rail: Control = $UI/PlayerHpRail
+@onready var player_side_fill: ColorRect = $UI/PlayerHpRail/Fill
+@onready var player_side_ghost: ColorRect = $UI/PlayerHpRail/Ghost
+@onready var player_side_name: Label = $UI/PlayerHpRail/NameLabel
+@onready var enemy_hp_rail: Control = $UI/EnemyHpRail
+@onready var enemy_side_fill: ColorRect = $UI/EnemyHpRail/Fill
+@onready var enemy_side_ghost: ColorRect = $UI/EnemyHpRail/Ghost
+@onready var enemy_side_name: Label = $UI/EnemyHpRail/NameLabel
 @onready var dialogue_bubble: PanelContainer = $UI/DialogueBubble
 @onready var dialogue_label:  Label          = $UI/DialogueBubble/MarginContainer/DialogueLabel
 @onready var loser_button:    Button = $UI/LoserButton
@@ -29,19 +37,28 @@ const DIALOGUE_SHOW_SEC: float = 3.5
 var _gold_display: float = 0.0
 var _gold_target:  float = 0.0
 var _tracked_player_hp: int = -1
-var _hp_ghost_width: float = -1.0
+var _hp_ghost_height: float = -1.0
 var _shake_tween: Tween = null
 var _card_stagger_tween: Tween = null
 var _enemy_card_base_offsets: Vector2 = Vector2.ZERO
 func _ready():
 	game_manager = $GameManager
 	room_manager = $RoomManager
-	beat_bar     = $UI/BeatBar
+	beat_bar     = $BeatLayer/BeatBar
 	background   = $Background
 	beat_sound   = $SoundPlayers/BeatSound
 	beat_sound.stream       = SoundGen.create_beat_hit()
 	game_manager.beat_sound = beat_sound
 	beat_bar.game_manager   = game_manager
+	# Edge HP rails replace the old top HP strip + enemy card ATK block.
+	hp_label.visible = false
+	hp_bar_fill.get_parent().visible = false
+	atk_label.visible = false
+	enemy_card_anchor.visible = false
+	if enemy_atk_label:
+		enemy_atk_label.visible = false
+	player_side_name.text = "YOU"
+	_setup_side_hp_labels()
 	loser_button.visible = false
 	loser_button.text = "I can't hold it..."
 	loser_button.pressed.connect(_on_loser_pressed)
@@ -76,6 +93,21 @@ func _ready():
 		FirstMeetBridge.clear()
 	else:
 		room_manager.start_run()
+
+func _setup_side_hp_labels() -> void:
+	for lab in [player_side_name, enemy_side_name]:
+		if lab == null:
+			continue
+		lab.add_theme_font_size_override("font_size", 32)
+		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lab.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lab.autowrap_mode = TextServer.AUTOWRAP_OFF
+		lab.rotation_degrees = -90.0
+		lab.set_anchors_preset(Control.PRESET_FULL_RECT)
+		lab.offset_left = -120.0
+		lab.offset_right = 120.0
+		lab.offset_top = 0.0
+		lab.offset_bottom = 0.0
 func _update_all_hud():
 	_update_player_hud()
 	_update_enemy_hud()
@@ -90,41 +122,58 @@ func _update_player_hud():
 	var p_pct = clamp(
 		float(gm.player_health) / float(gm.player_max_health) if gm.player_max_health > 0 else 0.0,
 		0.0, 1.0)
-	var bg_w: float = hp_bar_fill.get_parent().size.x
-	var new_w: float = bg_w * p_pct
+	var bg_h: float = maxf(1.0, player_hp_rail.size.y)
+	var new_h: float = bg_h * p_pct
 	if hp_dropped:
-		var prev_w: float = hp_bar_fill.size.x if hp_bar_fill.size.x > 0.0 else new_w
-		if _hp_ghost_width < 0.0:
-			_hp_ghost_width = prev_w
+		var prev_h: float = player_side_fill.size.y if player_side_fill.size.y > 0.0 else new_h
+		if _hp_ghost_height < 0.0:
+			_hp_ghost_height = prev_h
 		else:
-			_hp_ghost_width = maxf(_hp_ghost_width, prev_w)
+			_hp_ghost_height = maxf(_hp_ghost_height, prev_h)
 		_play_player_hurt_feedback()
 	elif _tracked_player_hp >= 0 and gm.player_health >= _tracked_player_hp:
-		_hp_ghost_width = new_w
-	hp_bar_fill.size.x = new_w
-	hp_bar_fill.color = Color(0.95, 0.15, 0.15, 1) if p_pct <= 0.25 else \
+		_hp_ghost_height = new_h
+	_apply_vertical_fill(player_side_fill, player_hp_rail.size, new_h, Color(0.95, 0.15, 0.15, 1) if p_pct <= 0.25 else \
 						Color(0.95, 0.65, 0.1,  1) if p_pct <= 0.5  else \
-						Color(0.85, 0.85, 0.85, 1)
-	if hp_bar_ghost:
-		hp_bar_ghost.position = Vector2.ZERO
-		hp_bar_ghost.size.y = hp_bar_fill.size.y if hp_bar_fill.size.y > 0.0 else hp_bar_fill.get_parent().size.y
-		if _hp_ghost_width < 0.0:
-			_hp_ghost_width = new_w
-		hp_bar_ghost.size.x = maxf(_hp_ghost_width, new_w)
+						Color(0.85, 0.85, 0.85, 0.95))
+	player_side_name.text = "YOU  %d/%d" % [gm.player_health, gm.player_max_health]
+	if player_side_ghost:
+		if _hp_ghost_height < 0.0:
+			_hp_ghost_height = new_h
+		_apply_vertical_fill(player_side_ghost, player_hp_rail.size, maxf(_hp_ghost_height, new_h), Color(0.9, 0.12, 0.12, 0.55))
 	_tracked_player_hp = gm.player_health
+
 func _update_enemy_hud():
 	var gm = game_manager
+	var pretty := "Enemy"
 	if gm.active_enemy:
-		var pretty = gm.active_enemy_type.replace("_", " ").capitalize()
+		pretty = gm.active_enemy_type.replace("_", " ").capitalize()
 		enemy_name_label.text = "- %s -" % pretty
 		enemy_atk_label.text  = "ATK: %d" % gm.active_enemy.damage
 	var e_pct = clamp(
 		float(gm.enemy_health) / float(gm.enemy_max_health) if gm.enemy_max_health > 0 else 0.0,
 		0.0, 1.0)
-	enemy_hp_bar_fill.size.x = enemy_hp_bar_fill.get_parent().size.x * e_pct
+	var bg_h: float = maxf(1.0, enemy_hp_rail.size.y)
+	var new_h: float = bg_h * e_pct
+	_apply_vertical_fill(enemy_side_fill, enemy_hp_rail.size, new_h, Color(0.95, 0.35, 0.55, 1) if e_pct <= 0.25 else \
+						Color(0.95, 0.55, 0.35, 1) if e_pct <= 0.5 else \
+						Color(0.9, 0.75, 0.85, 0.95))
+	enemy_side_name.text = "%s  %d/%d" % [pretty, gm.enemy_health, gm.enemy_max_health]
+	if enemy_side_ghost:
+		_apply_vertical_fill(enemy_side_ghost, enemy_hp_rail.size, new_h, Color(0.7, 0.2, 0.35, 0.35))
+	if enemy_hp_bar_fill and enemy_hp_bar_fill.get_parent():
+		enemy_hp_bar_fill.size.x = enemy_hp_bar_fill.get_parent().size.x * e_pct
+
+func _apply_vertical_fill(fill: ColorRect, rail_size: Vector2, height: float, col: Color) -> void:
+	var w: float = maxf(1.0, rail_size.x)
+	var h: float = maxf(0.0, minf(height, rail_size.y))
+	fill.color = col
+	fill.size = Vector2(w, h)
+	fill.position = Vector2(0.0, maxf(0.0, rail_size.y - h))
+
 func _process(delta: float):
 	background.size = get_viewport().get_visible_rect().size
-	beat_bar.size   = background.size
+	beat_bar.size = get_viewport().get_visible_rect().size
 	if _dialogue_timer > 0.0:
 		_dialogue_timer -= delta
 		dialogue_bubble.modulate.a = min(1.0, _dialogue_timer * 2.0)
@@ -135,15 +184,14 @@ func _process(delta: float):
 		var speed = max(abs(diff) * 3.0, 10.0)
 		_gold_display = move_toward(_gold_display, _gold_target, speed * delta)
 		gold_label.text = "Gold: %d" % int(_gold_display)
-	if hp_bar_ghost and _hp_ghost_width >= 0.0:
-		var fill_w: float = hp_bar_fill.size.x
-		if _hp_ghost_width > fill_w:
-			var drain := maxf(36.0, (_hp_ghost_width - fill_w) * 2.8)
-			_hp_ghost_width = move_toward(_hp_ghost_width, fill_w, drain * delta)
+	if player_side_ghost and _hp_ghost_height >= 0.0:
+		var fill_h: float = player_side_fill.size.y
+		if _hp_ghost_height > fill_h:
+			var drain := maxf(36.0, (_hp_ghost_height - fill_h) * 2.8)
+			_hp_ghost_height = move_toward(_hp_ghost_height, fill_h, drain * delta)
 		else:
-			_hp_ghost_width = fill_w
-		hp_bar_ghost.size.x = _hp_ghost_width
-		hp_bar_ghost.size.y = hp_bar_fill.size.y if hp_bar_fill.size.y > 0.0 else hp_bar_fill.get_parent().size.y
+			_hp_ghost_height = fill_h
+		_apply_vertical_fill(player_side_ghost, player_hp_rail.size, _hp_ghost_height, Color(0.9, 0.12, 0.12, 0.55))
 func _show_treasure_screen(gold_reward: int):
 	for child in loot_list.get_children():
 		child.queue_free()
@@ -211,6 +259,7 @@ func _on_enemy_type_swapped(type_name: String):
 	background.load_enemy_assets(type_name)
 	var pretty = type_name.replace("_", " ").capitalize()
 	enemy_name_label.text = "- %s -" % pretty
+	enemy_side_name.text = pretty
 func _on_enemy_dialogue(text: String):
 	if text == "":
 		return
@@ -222,10 +271,10 @@ func _on_enemy_defeated(gold_reward: int):
 	_show_treasure_screen(gold_reward)
 func _on_enter_survival(_enemy_name: String):
 	loser_button.visible      = true
-	enemy_card_anchor.visible = false
+	enemy_hp_rail.visible = false
 func _on_survival_success():
 	loser_button.visible      = false
-	enemy_card_anchor.visible = true
+	enemy_hp_rail.visible = true
 	call_deferred("_force_enemy_bar_update")
 func _force_enemy_bar_update():
 	game_manager.emit_signal("enemy_hp_changed")
@@ -252,36 +301,38 @@ func _play_player_hurt_feedback() -> void:
 	SoundGen.play_hurt()
 	if _shake_tween and _shake_tween.is_valid():
 		_shake_tween.kill()
+	# Never shake the UI CanvasLayer — BeatBar lives there and must stay rock-steady.
 	ui_layer.offset = Vector2.ZERO
+	background.position = Vector2.ZERO
 	_shake_tween = create_tween()
-	_shake_tween.tween_property(ui_layer, "offset", Vector2(5, -3), 0.035)
-	_shake_tween.tween_property(ui_layer, "offset", Vector2(-4, 3), 0.04)
-	_shake_tween.tween_property(ui_layer, "offset", Vector2(3, -2), 0.035)
-	_shake_tween.tween_property(ui_layer, "offset", Vector2.ZERO, 0.05)
+	_shake_tween.tween_property(background, "position", Vector2(6, -4), 0.035)
+	_shake_tween.tween_property(background, "position", Vector2(-5, 4), 0.04)
+	_shake_tween.tween_property(background, "position", Vector2(3, -2), 0.035)
+	_shake_tween.tween_property(background, "position", Vector2.ZERO, 0.05)
 func _play_enemy_hit_feedback() -> void:
 	SoundGen.play_hit()
 	if background.has_method("play_hit_stagger"):
 		background.play_hit_stagger()
 	if _card_stagger_tween and _card_stagger_tween.is_valid():
 		_card_stagger_tween.kill()
-	var base_l: float = _enemy_card_base_offsets.x
-	var base_r: float = _enemy_card_base_offsets.y
-	enemy_card_anchor.offset_left = base_l
-	enemy_card_anchor.offset_right = base_r
+	var base_l: float = enemy_hp_rail.offset_left
+	var base_r: float = enemy_hp_rail.offset_right
+	enemy_hp_rail.offset_left = base_l
+	enemy_hp_rail.offset_right = base_r
 	_card_stagger_tween = create_tween()
 	_card_stagger_tween.tween_callback(func():
-		enemy_card_anchor.offset_left = base_l + 6.0
-		enemy_card_anchor.offset_right = base_r + 6.0
+		enemy_hp_rail.offset_left = base_l - 4.0
+		enemy_hp_rail.offset_right = base_r - 4.0
 	)
 	_card_stagger_tween.tween_interval(0.045)
 	_card_stagger_tween.tween_callback(func():
-		enemy_card_anchor.offset_left = base_l - 6.0
-		enemy_card_anchor.offset_right = base_r - 6.0
+		enemy_hp_rail.offset_left = base_l + 4.0
+		enemy_hp_rail.offset_right = base_r + 4.0
 	)
 	_card_stagger_tween.tween_interval(0.07)
 	_card_stagger_tween.tween_callback(func():
-		enemy_card_anchor.offset_left = base_l
-		enemy_card_anchor.offset_right = base_r
+		enemy_hp_rail.offset_left = base_l
+		enemy_hp_rail.offset_right = base_r
 	)
 func _run_rest_room() -> void:
 	var heal := int(game_manager.player_max_health * 0.35)
@@ -339,7 +390,7 @@ func _show_choice_overlay(title: String, body: String, primary: String, on_prima
 	margin.add_child(v)
 	var t := Label.new()
 	t.text = title
-	t.add_theme_font_size_override("font_size", 28)
+	t.add_theme_font_size_override("font_size", 32)
 	v.add_child(t)
 	var b := Label.new()
 	b.text = body

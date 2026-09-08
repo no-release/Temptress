@@ -8,6 +8,7 @@ extends Control
 @onready var back_button: Button = $Margin/VBox/Back
 
 func _ready() -> void:
+	MusicDirector.play("home")
 	back_button.pressed.connect(func():
 		SoundGen.play_ui_click()
 		get_tree().change_scene_to_file("res://scenes/Town.tscn")
