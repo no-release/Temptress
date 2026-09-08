@@ -18,13 +18,7 @@ var beat_sound:   AudioStreamPlayer
 @onready var enemy_hp_bar_fill: ColorRect = $UI/EnemyCardAnchor/EnemyCard/MarginContainer/VBoxContainer/HPRow/EnemyHPBarBg/EnemyHPBarFill
 @onready var enemy_atk_label:   Label     = $UI/EnemyCardAnchor/EnemyCard/MarginContainer/VBoxContainer/EnemyAtkLabel
 @onready var player_hp_rail: Control = $UI/PlayerHpRail
-@onready var player_side_fill: ColorRect = $UI/PlayerHpRail/Fill
-@onready var player_side_ghost: ColorRect = $UI/PlayerHpRail/Ghost
-@onready var player_side_name: Label = $UI/PlayerHpRail/NameLabel
 @onready var enemy_hp_rail: Control = $UI/EnemyHpRail
-@onready var enemy_side_fill: ColorRect = $UI/EnemyHpRail/Fill
-@onready var enemy_side_ghost: ColorRect = $UI/EnemyHpRail/Ghost
-@onready var enemy_side_name: Label = $UI/EnemyHpRail/NameLabel
 @onready var dialogue_bubble: PanelContainer = $UI/DialogueBubble
 @onready var dialogue_label:  Label          = $UI/DialogueBubble/MarginContainer/DialogueLabel
 @onready var loser_button:    Button = $UI/LoserButton
@@ -57,8 +51,7 @@ func _ready():
 	enemy_card_anchor.visible = false
 	if enemy_atk_label:
 		enemy_atk_label.visible = false
-	player_side_name.text = "YOU"
-	_setup_side_hp_labels()
+	_init_side_hp_rails()
 	loser_button.visible = false
 	loser_button.text = "I can't hold it..."
 	loser_button.pressed.connect(_on_loser_pressed)
@@ -94,20 +87,26 @@ func _ready():
 	else:
 		room_manager.start_run()
 
-func _setup_side_hp_labels() -> void:
-	for lab in [player_side_name, enemy_side_name]:
-		if lab == null:
-			continue
-		lab.add_theme_font_size_override("font_size", 32)
-		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lab.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lab.autowrap_mode = TextServer.AUTOWRAP_OFF
-		lab.rotation_degrees = -90.0
-		lab.set_anchors_preset(Control.PRESET_FULL_RECT)
-		lab.offset_left = -120.0
-		lab.offset_right = 120.0
-		lab.offset_top = 0.0
-		lab.offset_bottom = 0.0
+
+
+
+
+
+func _side_enemy_label(pretty: String, type_name: String) -> String:
+	# Prefer first token of type (slime_girl → SLIME); fallback to pretty.
+	var raw := type_name.strip_edges()
+	if raw != "":
+		var token := raw.split("_")[0]
+		if token != "":
+			return token.to_upper()
+	return pretty.to_upper()
+
+func _init_side_hp_rails() -> void:
+	if player_hp_rail and player_hp_rail.has_method("set_label"):
+		player_hp_rail.set_label("STAMINA")
+	if enemy_hp_rail and enemy_hp_rail.has_method("set_label"):
+		enemy_hp_rail.set_label("ENEMY")
+
 func _update_all_hud():
 	_update_player_hud()
 	_update_enemy_hud()
@@ -122,25 +121,13 @@ func _update_player_hud():
 	var p_pct = clamp(
 		float(gm.player_health) / float(gm.player_max_health) if gm.player_max_health > 0 else 0.0,
 		0.0, 1.0)
-	var bg_h: float = maxf(1.0, player_hp_rail.size.y)
-	var new_h: float = bg_h * p_pct
 	if hp_dropped:
-		var prev_h: float = player_side_fill.size.y if player_side_fill.size.y > 0.0 else new_h
-		if _hp_ghost_height < 0.0:
-			_hp_ghost_height = prev_h
-		else:
-			_hp_ghost_height = maxf(_hp_ghost_height, prev_h)
 		_play_player_hurt_feedback()
-	elif _tracked_player_hp >= 0 and gm.player_health >= _tracked_player_hp:
-		_hp_ghost_height = new_h
-	_apply_vertical_fill(player_side_fill, player_hp_rail.size, new_h, Color(0.95, 0.15, 0.15, 1) if p_pct <= 0.25 else \
-						Color(0.95, 0.65, 0.1,  1) if p_pct <= 0.5  else \
-						Color(0.85, 0.85, 0.85, 0.95))
-	player_side_name.text = "YOU  %d/%d" % [gm.player_health, gm.player_max_health]
-	if player_side_ghost:
-		if _hp_ghost_height < 0.0:
-			_hp_ghost_height = new_h
-		_apply_vertical_fill(player_side_ghost, player_hp_rail.size, maxf(_hp_ghost_height, new_h), Color(0.9, 0.12, 0.12, 0.55))
+	var p_col = Color(0.85, 0.08, 0.15, 1) if p_pct <= 0.25 else Color(0.72, 0.12, 0.42, 1) if p_pct <= 0.5 else Color(0.48, 0.12, 0.72, 1)
+	if player_hp_rail and player_hp_rail.has_method("set_hp"):
+		player_hp_rail.set_hp(p_pct, p_col)
+	if player_hp_rail and player_hp_rail.has_method("set_label"):
+		player_hp_rail.set_label("STAMINA")
 	_tracked_player_hp = gm.player_health
 
 func _update_enemy_hud():
@@ -153,23 +140,14 @@ func _update_enemy_hud():
 	var e_pct = clamp(
 		float(gm.enemy_health) / float(gm.enemy_max_health) if gm.enemy_max_health > 0 else 0.0,
 		0.0, 1.0)
-	var bg_h: float = maxf(1.0, enemy_hp_rail.size.y)
-	var new_h: float = bg_h * e_pct
-	_apply_vertical_fill(enemy_side_fill, enemy_hp_rail.size, new_h, Color(0.95, 0.35, 0.55, 1) if e_pct <= 0.25 else \
-						Color(0.95, 0.55, 0.35, 1) if e_pct <= 0.5 else \
-						Color(0.9, 0.75, 0.85, 0.95))
-	enemy_side_name.text = "%s  %d/%d" % [pretty, gm.enemy_health, gm.enemy_max_health]
-	if enemy_side_ghost:
-		_apply_vertical_fill(enemy_side_ghost, enemy_hp_rail.size, new_h, Color(0.7, 0.2, 0.35, 0.35))
+	var e_col = Color(0.85, 0.08, 0.15, 1) if e_pct <= 0.25 else Color(0.72, 0.12, 0.42, 1) if e_pct <= 0.5 else Color(0.48, 0.12, 0.72, 1)
+	if enemy_hp_rail and enemy_hp_rail.has_method("set_hp"):
+		enemy_hp_rail.set_hp(e_pct, e_col)
+	if enemy_hp_rail and enemy_hp_rail.has_method("set_label"):
+		enemy_hp_rail.set_label(_side_enemy_label(pretty, gm.active_enemy_type if gm.active_enemy else ""))
 	if enemy_hp_bar_fill and enemy_hp_bar_fill.get_parent():
 		enemy_hp_bar_fill.size.x = enemy_hp_bar_fill.get_parent().size.x * e_pct
 
-func _apply_vertical_fill(fill: ColorRect, rail_size: Vector2, height: float, col: Color) -> void:
-	var w: float = maxf(1.0, rail_size.x)
-	var h: float = maxf(0.0, minf(height, rail_size.y))
-	fill.color = col
-	fill.size = Vector2(w, h)
-	fill.position = Vector2(0.0, maxf(0.0, rail_size.y - h))
 
 func _process(delta: float):
 	background.size = get_viewport().get_visible_rect().size
@@ -184,14 +162,8 @@ func _process(delta: float):
 		var speed = max(abs(diff) * 3.0, 10.0)
 		_gold_display = move_toward(_gold_display, _gold_target, speed * delta)
 		gold_label.text = "Gold: %d" % int(_gold_display)
-	if player_side_ghost and _hp_ghost_height >= 0.0:
-		var fill_h: float = player_side_fill.size.y
-		if _hp_ghost_height > fill_h:
-			var drain := maxf(36.0, (_hp_ghost_height - fill_h) * 2.8)
-			_hp_ghost_height = move_toward(_hp_ghost_height, fill_h, drain * delta)
-		else:
-			_hp_ghost_height = fill_h
-		_apply_vertical_fill(player_side_ghost, player_hp_rail.size, _hp_ghost_height, Color(0.9, 0.12, 0.12, 0.55))
+	pass
+
 func _show_treasure_screen(gold_reward: int):
 	for child in loot_list.get_children():
 		child.queue_free()
@@ -259,7 +231,8 @@ func _on_enemy_type_swapped(type_name: String):
 	background.load_enemy_assets(type_name)
 	var pretty = type_name.replace("_", " ").capitalize()
 	enemy_name_label.text = "- %s -" % pretty
-	enemy_side_name.text = pretty
+	if enemy_hp_rail and enemy_hp_rail.has_method("set_label"):
+		enemy_hp_rail.set_label(_side_enemy_label(pretty, type_name))
 func _on_enemy_dialogue(text: String):
 	if text == "":
 		return

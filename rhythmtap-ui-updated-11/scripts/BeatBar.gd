@@ -11,12 +11,13 @@ var impact_alpha: float = 0.0
 var impact_scale: float = 1.0
 
 const COLOR_BEAT       = Color(1.0, 0.642, 0.899, 1.0)
-const COLOR_BEAT_CLOSE = Color(0.4, 0.002, 0.634, 1.0)
-const COLOR_ACCENT     = Color(1.0, 0.85, 0.35, 1.0)
-const COLOR_GHOST      = Color(0.55, 0.45, 0.75, 0.55)
-const COLOR_IMPACT     = Color(0.752, 0.0, 0.606, 1.0)
+const COLOR_ACCENT     = Color(1.0, 0.642, 0.899, 1.0)
+const COLOR_GHOST      = Color(1.0, 0.642, 0.899, 1.0)
+const COLOR_IMPACT     = Color(1.0, 0.642, 0.899, 1.0)
 const COLOR_TRACK_BG   = Color(0.0,  0.0,  0.0, 0.45)
 const COLOR_TRACK_LINE = Color(1.0,  1.0,  1.0, 0.18)
+
+
 
 func _ready() -> void:
 	set_process(true)
@@ -96,23 +97,11 @@ func _draw() -> void:
 		var lx: float = cx * (1.0 - ratio)
 		var rx: float = cx + cx * ratio
 
-		var beat_color: Color
-		if accent >= 2:
-			beat_color = COLOR_ACCENT.lerp(COLOR_BEAT_CLOSE, proximity * proximity)
-		elif accent <= 0:
-			beat_color = COLOR_GHOST.lerp(COLOR_BEAT_CLOSE, proximity * proximity * 0.45)
-		else:
-			beat_color = COLOR_BEAT.lerp(COLOR_BEAT_CLOSE, proximity * proximity)
-
-		var radius_base: float = 8.0
-		if accent >= 2:
-			radius_base = 11.0
-		elif accent <= 0:
-			radius_base = 5.5
-		var radius: float = lerpf(radius_base, radius_base + 10.0, sqrt(proximity))
+		# Same size/color; alpha 0 at spawn (edges) → 1 at center.
+		var beat_color: Color = Color(COLOR_BEAT.r, COLOR_BEAT.g, COLOR_BEAT.b, clampf(proximity, 0.0, 1.0))
+		var radius: float = 8.0
 
 		for bx in [lx, rx]:
-			draw_circle(Vector2(bx, cy), radius + 10.0, Color(beat_color.r, beat_color.g, beat_color.b, proximity * 0.18))
 			draw_circle(Vector2(bx, cy), radius, beat_color)
 
 	if impact_alpha > 0.0:
