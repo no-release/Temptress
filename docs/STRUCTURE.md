@@ -1,32 +1,32 @@
 # Where files live
 
-## Live game
+Repo root is docs + the Godot project. Open:
 
-All runtime code and imported assets:
+`rhythmtap-ui-updated-11/project.godot`
 
-`rhythmtap-ui-updated-11/`
+`res://scripts/GameManager.gd` on disk is
+`rhythmtap-ui-updated-11/scripts/GameManager.gd`.
 
-Godot project root = that folder. `res://scripts/GameManager.gd` means
-`rhythmtap-ui-updated-11/scripts/GameManager.gd` on disk.
+## Scenes — all used
 
-### Scenes
+Checked `project.godot`, every `.gd` `change_scene_to_file`, and PackedScene instances in `.tscn` files. Nothing in `scenes/` is orphaned.
 
-| Scene | Purpose |
+| Scene | How it is reached |
 |---|---|
-| `ReceptionistBoot.tscn` | App entry. Door + contract + hub. |
-| `GuildBoard.tscn` | Ranked quest offers. |
-| `Town.tscn` | Post-run hub: rank, gold, fines. |
-| `Home.tscn` | Meta upgrades. |
-| `MainMenu.tscn` | Title card. |
-| `FirstMeetVN.tscn` | First-meet pages. |
-| `Main.tscn` | Combat. |
-| `TreasureScreen.tscn` | Loot / after-fight. |
-| `TopHud.tscn` | Combat HUD. |
-| `SideHpRail.tscn` | Side HP bars. |
-| `DialogueBubble.tscn` | Combat subtitle widget. |
-| `EnemyCard.tscn` | Board / UI enemy card. |
+| `ReceptionistBoot.tscn` | `run/main_scene`. Also from Town and MainMenu. |
+| `GuildBoard.tscn` | ReceptionistBoot hub + Town. Accept → Main. Back → Town. |
+| `Home.tscn` | ReceptionistBoot hub + Town. Back → Town. |
+| `MainMenu.tscn` | ReceptionistBoot hub + Town. Start → ReceptionistBoot. |
+| `Main.tscn` | GuildBoard accept, and return from FirstMeetVN. |
+| `FirstMeetVN.tscn` | Main, first time an enemy is unmet. Returns to Main. |
+| `Town.tscn` | End of combat (clear/concede) and Home back. |
+| `TopHud.tscn` | Instanced in Main.tscn. |
+| `EnemyCard.tscn` | Instanced in Main.tscn. |
+| `SideHpRail.tscn` | Instanced twice in Main.tscn (player + enemy). |
+| `DialogueBubble.tscn` | Instanced in Main.tscn (combat subtitle bar). |
+| `TreasureScreen.tscn` | Instanced in Main.tscn. |
 
-### Data scripts
+## Data scripts
 
 | File | Purpose |
 |---|---|
@@ -41,21 +41,3 @@ Godot project root = that folder. `res://scripts/GameManager.gd` means
 | `SubtitleMarkup.gd` | `[moan]` / `[command]` / … → BBCode. |
 | `MetaSave.gd` | Disk-backed meta progress. |
 | `ActiveRun.gd` / `RunState.gd` | Current quest. |
-
-## Staging (repo root)
-
-These are **not** loaded by Godot:
-
-```
-_art_emotions2_extract/     VN emotion stills (dragoness, troll)
-_art_emotions3_extract/     slime / succubus emotions
-_art_emotions4_extract/     goblin / slime teasing
-_art_hp_combat_extract/     combat poses + HP rail frames
-_art_named_extract/         named combat + VN + town/home BGs
-_art_troll_kitsune_extract/ kitsune emotions + troll combat
-_audio_pack_extract/        music + sfx pack
-_audio_scripts_extract/     audio helper scripts
-*.tar                       packed copies of the above
-```
-
-Treat staging as an inbox. After a file is imported under `rhythmtap-ui-updated-11/`, the staging copy can go.
