@@ -24,50 +24,48 @@ Window: 1280×720, canvas stretch.
 
 ```
 Temptress/
-├─ README.md                          this file
-├─ docs/                               repo-level notes
+├─ README.md
+├─ docs/                     PHASES.md, STRUCTURE.md
 ├─ .gitignore
 ├─ .gitattributes
-├─ _art_* / _audio_*                   STAGING dumps (not the live project)
-├─ _*.py                               leftover one-off patch scripts (being removed)
-└─ rhythmtap-ui-updated-11/            LIVE Godot project  ← open this
+└─ rhythmtap-ui-updated-11/   live Godot project  ← open this
     ├─ project.godot
     ├─ scenes/
-    ├─ scripts/          combat, hubs, autoloads
-    ├─ scripts/data/     catalogs, save, quest gen, copy
-    ├─ audio/            combat BGM + SFX used at runtime
+    ├─ scripts/               combat, hubs, autoloads
+    ├─ scripts/data/          catalogs, save, quest gen, copy
+    ├─ audio/
     ├─ backgrounds/  bg_images/
-    ├─ enemy_images/ ui_art/  vn_portraits/
+    ├─ enemy_images/  ui_art/  vn_portraits/
     ├─ addons/godot_ai/
-    └─ README_PHASE*.md  per-phase notes (also summarized in docs/)
+    └─ README_PHASE*.md
 ```
 
-Two layers exist on purpose right now:
+`res://` paths resolve inside `rhythmtap-ui-updated-11/` only. There is no `project.godot` at the git root.
 
-| Path | What it is |
-|---|---|
-| `rhythmtap-ui-updated-11/` | The only folder Godot should open. `res://` paths resolve here. |
-| `_art_*_extract/`, `_audio_*_extract/`, `*.tar` | Incoming art/audio staging. Duplicates of (or sources for) files later imported into the Godot project. |
-| `_patch_*.py`, `_read_*.py` | Scratch scripts used to tweak UI colors/rails. Not part of the game runtime. |
+## Scene graph
 
-Do not point Godot at the git root. There is no `project.godot` there.
-
-## Godot project map
-
-### Boot and hubs
+All 12 scenes under `scenes/` are referenced. None are orphaned.
 
 ```
-ReceptionistBoot.tscn  →  first boot / contract / greetings
-        └─ GuildBoard.tscn   pick a generated quest offer
-        └─ Town.tscn         rank, gold, fine payoff, hub buttons
-        └─ Home.tscn         spend banked gold on upgrades
-        └─ MainMenu.tscn     title; Start goes back through the door
-        └─ FirstMeetVN.tscn  full-screen typewriter intro (once per enemy)
-        └─ Main.tscn         combat room
-        └─ TreasureScreen.tscn
+ReceptionistBoot.tscn          project main scene
+  ├─ GuildBoard.tscn           accept quest → Main.tscn
+  ├─ Home.tscn                 back → Town.tscn
+  ├─ MainMenu.tscn             Start → ReceptionistBoot.tscn
+  └─ (hub also lists those three)
+
+Main.tscn                      combat
+  ├─ instances TopHud.tscn
+  ├─ instances EnemyCard.tscn
+  ├─ instances SideHpRail.tscn  (×2, player + enemy)
+  ├─ instances DialogueBubble.tscn   combat subtitles
+  ├─ instances TreasureScreen.tscn
+  ├─ unmet enemy → FirstMeetVN.tscn → back to Main.tscn
+  └─ run over → Town.tscn
+
+Town.tscn                      post-run hub → Board / Home / MainMenu / Boot
 ```
 
-### Autoloads (`project.godot`)
+## Autoloads (`project.godot`)
 
 | Autoload | Role |
 |---|---|
@@ -79,19 +77,19 @@ ReceptionistBoot.tscn  →  first boot / contract / greetings
 | `Phase12CombatUI` / `Phase12CombatLogic` | Combat clarity helpers from phase 12 |
 | `_mcp_game_helper` | `addons/godot_ai` runtime helper |
 
-### Scripts worth knowing
+## Scripts worth knowing
 
 ```
 scripts/
   GameManager.gd          encounter loop, hits, HP, concede / clear
-  Main.gd / MainBase.gd   combat scene wiring
+  Main.gd                 combat scene wiring
   BeatBar.gd              scrolling notes + pattern accents
   RoomManager.gd          walk the generated room list
   GuildBoard.gd           ranked offers UI
   Town.gd  Home.gd  MainMenu.gd
   ReceptionistBoot.gd     door / contract / greetings
   FirstMeetVN.gd          typewriter VN
-  CombatSubtitle.gd       bottom subtitle bar (was DialogueBubble)
+  CombatSubtitle.gd       bottom subtitle bar (DialogueBubble scene)
   SideHpRail.gd
   SoundGen.gd  MusicDirector.gd
   data/
@@ -101,19 +99,6 @@ scripts/
     FirstMeetScenes.gd  EncounterLines.gd
     ReceptionistGreetings.gd  SubtitleMarkup.gd
 ```
-
-### Runtime assets (inside the Godot project)
-
-```
-audio/            combat_theme and related music/sfx
-backgrounds/      combat / room backdrops
-bg_images/        extra backgrounds
-enemy_images/     fight portraits / poses
-vn_portraits/     first-meet + receptionist art
-ui_art/           HUD chrome
-```
-
-Staging copies of the same kind of files also live at repo root under `_art_*_extract` and `_audio_pack_extract`. Prefer the Godot-project copies at runtime.
 
 ## How a run works
 
@@ -161,14 +146,4 @@ Bottom bar via `DialogueBubble.tscn` + `CombatSubtitle.gd`. Markup reference: `r
 
 ## Development history
 
-Built as phases 0–13 (PRs #1–#14). Short index is in [`docs/PHASES.md`](docs/PHASES.md). The original per-phase files remain under `rhythmtap-ui-updated-11/README_PHASE*.md`.
-
-## Housekeeping notes
-
-This branch starts cleaning the workbench around the Godot project:
-
-- Root `*.tar` archives duplicate already-extracted folders.
-- `_patch_*.py` / `_read_*.py` were one-off editor helpers, not runtime code.
-- `_art_*_extract` and `_audio_*_extract` stay for now so art is not deleted until it is confirmed imported under `rhythmtap-ui-updated-11/`.
-
-If you add new art, import it into the Godot project folders above. Do not keep a second live copy at repo root.
+Built as phases 0–13 (PRs #1–#14). Short index is in [`docs/PHASES.md`](docs/PHASES.md). Per-phase files remain under `rhythmtap-ui-updated-11/README_PHASE*.md`.
