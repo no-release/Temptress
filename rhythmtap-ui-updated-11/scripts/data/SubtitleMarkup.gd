@@ -18,6 +18,8 @@ const SITUATION_WRAP := {
 	"rematch": "tease",
 	"drain": "drain",
 	"notice": "soft",
+	"first_meet": "tease",
+	"receptionist": "soft",
 }
 
 ## Convenience tags → BBCode. Keep nested-safe (no overlapping same tag).
@@ -145,6 +147,10 @@ static func default_cps(raw: String, situation: String = "") -> float:
 	match situation:
 		"player_near_death", "losing", "drain":
 			return 26.0
+		"first_meet":
+			return 32.0
+		"receptionist":
+			return 34.0
 		"shout", "player_defeated":
 			return 52.0
 		_:
