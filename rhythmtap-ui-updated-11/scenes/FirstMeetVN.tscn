@@ -57,17 +57,17 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_dim")
 
 [node name="CharacterSprite" type="TextureRect" parent="."]
 layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
+anchors_preset = 11
+anchor_left = 0.28
+anchor_top = 0.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -720.0
-offset_top = -980.0
-offset_right = 80.0
-offset_bottom = 60.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
 grow_horizontal = 0
-grow_vertical = 0
+grow_vertical = 2
 mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5
@@ -91,6 +91,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="Margin/VBox"]
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.44705883, 1, 1)
@@ -104,11 +105,12 @@ size_flags_vertical = 3
 mouse_filter = 2
 
 [node name="NameLabel" type="Label" parent="Margin/VBox"]
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.75, 1, 1)
 theme_override_font_sizes/font_size = 22
-text = "Enemy"
+text = ""
 
 [node name="TextBox" type="PanelContainer" parent="Margin/VBox"]
 custom_minimum_size = Vector2(0, 180)
@@ -129,13 +131,16 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="DialogueLabel" type="Label" parent="Margin/VBox/TextBox/Margin/VBox"]
+[node name="DialogueLabel" type="RichTextLabel" parent="Margin/VBox/TextBox/Margin/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/normal_font_size = 20
+bbcode_enabled = true
 autowrap_mode = 3
-text = "…"
+fit_content = true
+scroll_active = false
+text = "..."
 
 [node name="ContinueHint" type="Label" parent="Margin/VBox/TextBox/Margin/VBox"]
 visible = false
@@ -143,5 +148,5 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.85, 1, 0.7)
 theme_override_font_sizes/font_size = 14
-text = "Click to continue…"
+text = "Click to continue..."
 horizontal_alignment = 2
