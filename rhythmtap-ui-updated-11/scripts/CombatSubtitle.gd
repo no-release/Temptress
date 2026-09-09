@@ -14,6 +14,10 @@ const BOTTOM_GAP_SURVIVAL := 248.0
 const BOTTOM_GAP_DRAIN := 360.0
 const BOTTOM_GAP_HUB := 88.0
 const FIRST_MEET_LINGER := 2.85
+const LINGER_MIN := 2.5
+const LINGER_MAX := 4.5
+const LINGER_PER_CHAR := 0.016
+const LINGER_REF_CHARS := 48
 
 signal sequence_finished
 
@@ -100,7 +104,7 @@ func show_line(text: String, situation: String = "") -> void:
 	_target_chars = _visible_length()
 	_typed = 0.0
 	if _playing_sequence:
-		_hold_left = _page_linger
+		_hold_left = _linger_for_page()
 	elif situation in ["drain", "losing", "gameover_remarks"]:
 		set_lane("drain")
 		_hold_left = HOLD_SEC + 2.4
@@ -125,6 +129,12 @@ func hide_now() -> void:
 	_turning_page = false
 	visible = false
 	modulate.a = 0.0
+
+func _linger_for_page() -> float:
+	# After the typewriter finishes, sit on the full line long enough to read
+	# while combat is still happening — not a crawl, just a real linger.
+	var extra := float(maxi(0, _target_chars - LINGER_REF_CHARS)) * LINGER_PER_CHAR
+	return clampf(_page_linger + extra, LINGER_MIN, LINGER_MAX)
 
 func _advance_queue() -> void:
 	if _queue.is_empty():
