@@ -29,6 +29,7 @@ FirstMeetBridge="*res://scripts/FirstMeetBridge.gd"
 Phase12CombatUI="*res://scripts/Phase12CombatUI.gd"
 Phase12CombatLogic="*res://scripts/Phase12CombatLogic.gd"
 FontKit="*res://scripts/FontKit.gd"
+DevCheats="*res://scripts/DevCheats.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]
