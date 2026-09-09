@@ -5,6 +5,7 @@ extends Control
 # Hub after clear/concede. Short receptionist lines (affinity / last_outcome).
 # Elaborate first-visit contract moved to ReceptionistBoot (Phase 10).
 # Phase 11: show RANK not affinity; hide pending-punishment spoilers.
+# Receptionist copy uses the combat subtitle plate (same fonts/colors/markup).
 # =============================================================================
 
 @onready var title_label: Label = $Margin/VBox/Title
@@ -33,6 +34,8 @@ const NEUTRAL := [
 	"Receptionist: Contracts, rest, and home -- in that order if you are smart.",
 ]
 
+var _sub: CombatSubtitle = null
+
 func _ready() -> void:
 	MusicDirector.play("town")
 	guild_button.pressed.connect(_on_guild)
@@ -43,22 +46,67 @@ func _ready() -> void:
 	if not MetaSave.receptionist_contract_signed:
 		get_tree().change_scene_to_file("res://scenes/ReceptionistBoot.tscn")
 		return
-	_refresh()
+	if receptionist_label:
+		receptionist_label.visible = false
+	_attach_subtitle()
+	_refresh(true)
 
-func _refresh() -> void:
+func _attach_subtitle() -> void:
+	var packed: PackedScene = load("res://scenes/DialogueBubble.tscn") as PackedScene
+	if packed == null:
+		return
+	_sub = packed.instantiate() as CombatSubtitle
+	add_child(_sub)
+	if _sub.has_method("set_lane"):
+		_sub.set_lane("hub")
+
+func _play_greeting_subtitle(raw: String) -> void:
+	if _sub == null or not _sub.has_method("play_sequence"):
+		if receptionist_label:
+			receptionist_label.visible = true
+			receptionist_label.text = raw
+		return
+	var pages := PackedStringArray()
+	for chunk in raw.split("\n"):
+		var line := String(chunk).strip_edges()
+		if line == "":
+			continue
+		pages.append(_format_line(line))
+	if pages.is_empty():
+		pages.append(_format_line(raw))
+	_sub.play_sequence(pages, "receptionist")
+
+func _format_line(page: String) -> String:
+	var speaker := "Receptionist"
+	var body := page.strip_edges()
+	var colon := body.find(": ")
+	if colon > 0 and colon < 48:
+		var head := body.substr(0, colon).strip_edges()
+		if head.find("\n") < 0:
+			speaker = head
+			body = body.substr(colon + 2).strip_edges()
+	body = body.replace("Receptionist: ", "")
+	if body.contains("[name="):
+		return body
+	return "[name=%s]%s" % [speaker, body]
+
+func _refresh(play_greeting: bool = true) -> void:
 	var affinity := MetaSave.receptionist_affinity
 	var outcome := MetaSave.last_outcome
-	match outcome:
-		"concede":
-			receptionist_label.text = DISAPPOINTED[randi() % DISAPPOINTED.size()]
-			if affinity <= -6:
-				receptionist_label.text += "\n(She barely looks at you.)"
-		"clear":
-			receptionist_label.text = PLEASED[randi() % PLEASED.size()]
-			if affinity >= 4:
-				receptionist_label.text += "\n(A rare almost-smile.)"
-		_:
-			receptionist_label.text = NEUTRAL[randi() % NEUTRAL.size()]
+	if play_greeting:
+		var greeting := ""
+		match outcome:
+			"concede":
+				greeting = DISAPPOINTED[randi() % DISAPPOINTED.size()]
+				if affinity <= -6:
+					greeting += "\n(She barely looks at you.)"
+			"clear":
+				greeting = PLEASED[randi() % PLEASED.size()]
+				if affinity >= 4:
+					greeting += "\n(A rare almost-smile.)"
+			_:
+				greeting = NEUTRAL[randi() % NEUTRAL.size()]
+		_play_greeting_subtitle(greeting)
 
 	# Phase 11: public status shows RANK, not affinity
 	status_label.text = "LV %d · Banked gold: %d · RANK %s" % [
@@ -85,7 +133,7 @@ func _on_pay_fine() -> void:
 	if cost <= 0:
 		return
 	if MetaSave.banked_gold < cost:
-		receptionist_label.text = "Receptionist: You do not have enough banked gold to clear the fine."
+		_play_greeting_subtitle("Receptionist: You do not have enough banked gold to clear the fine.")
 		return
 	MetaSave.banked_gold -= cost
 	var kept: Array = []
@@ -95,8 +143,8 @@ func _on_pay_fine() -> void:
 	MetaSave.pending_modifiers = kept
 	MetaSave.receptionist_affinity = mini(10, MetaSave.receptionist_affinity + 1)
 	MetaSave.save_to_disk()
-	receptionist_label.text = "Receptionist: Debt settled. Do not make me write another notice."
-	_refresh()
+	_play_greeting_subtitle("Receptionist: Debt settled. Do not make me write another notice.")
+	_refresh(false)
 
 func _on_guild() -> void:
 	SoundGen.play_ui_click()
