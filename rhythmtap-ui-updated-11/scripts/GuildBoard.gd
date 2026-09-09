@@ -23,6 +23,7 @@ var _offer_buttons: Array = []  # Array[Button]
 func _ready() -> void:
 	accept_button.pressed.connect(_on_accept)
 	back_button.pressed.connect(_on_back)
+	back_button.text = "- BACK TO HALL -"
 	_load_offers()
 
 func _load_offers() -> void:
@@ -101,5 +102,4 @@ func _on_accept() -> void:
 
 func _on_back() -> void:
 	SoundGen.play_ui_click()
-	# Hub is Town (redirects to ReceptionistBoot if contract unsigned)
-	get_tree().change_scene_to_file("res://scenes/Town.tscn")
+	get_tree().change_scene_to_file("res://scenes/ReceptionistBoot.tscn")
