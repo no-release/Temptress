@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="RhythmTap"
-run/main_scene="res://scenes/ReceptionistBoot.tscn"
+run/main_scene="res://scenes/MainMenu.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -28,6 +28,7 @@ MusicDirector="*res://scripts/MusicDirector.gd"
 FirstMeetBridge="*res://scripts/FirstMeetBridge.gd"
 Phase12CombatUI="*res://scripts/Phase12CombatUI.gd"
 Phase12CombatLogic="*res://scripts/Phase12CombatLogic.gd"
+FontKit="*res://scripts/FontKit.gd"
 DevCheats="*res://scripts/DevCheats.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 

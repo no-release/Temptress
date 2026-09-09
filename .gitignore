@@ -1,0 +1,16 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Godot 4+
+**/.godot/
+**/android/
+*.translation
+
+# Local scratch
+*.tmp
+*.log
