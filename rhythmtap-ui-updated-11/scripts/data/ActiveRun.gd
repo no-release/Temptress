@@ -71,6 +71,10 @@ func _roll_fail_modifier() -> ModifierDef:
 				"Cold Shoulder", "The receptionist is especially disappointed.")
 
 func end_run() -> void:
+	# Game-over used to skip mark_conceded and dump the player on Town.
+	# If the run is still open, treat leaving as a fold so the hall has lines.
+	if state and not state.cleared and not state.conceded:
+		mark_conceded()
 	state = null
 
 func room_list() -> Array:
