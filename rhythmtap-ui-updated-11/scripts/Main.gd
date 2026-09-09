@@ -200,15 +200,14 @@ func _on_room_started(room: Dictionary):
 	match room.get("type", ""):
 		"combat":
 			var enemy = room.get("enemy", "slime_girl")
-			if not MetaSave.has_met_enemy(enemy):
-				FirstMeetBridge.begin(enemy, room_manager.get_room_number() - 1, game_manager)
-				get_tree().change_scene_to_file("res://scenes/FirstMeetVN.tscn")
-				return
+			# Stay in combat. First-meet copy uses the battle subtitle plate.
 			if game_manager.game_state == game_manager.GameState.TREASURE:
 				game_manager.continue_after_treasure(enemy)
 			else:
 				game_manager.begin_encounter(enemy)
 			MusicDirector.play("combat")
+			if not MetaSave.has_met_enemy(enemy):
+				_begin_first_meet(enemy)
 		"rest":
 			await _run_rest_room()
 		"shop":
@@ -320,6 +319,34 @@ func _play_enemy_hit_feedback() -> void:
 		enemy_hp_rail.offset_left = base_l
 		enemy_hp_rail.offset_right = base_r
 	)
+
+func _begin_first_meet(enemy: String) -> void:
+	MetaSave.mark_enemy_met(enemy)
+	MetaSave.save_to_disk()
+	var pages := FirstMeetScenes.enemy_pages(enemy)
+	var formatted := PackedStringArray()
+	for page in pages:
+		formatted.append(_format_meet_line(String(page)))
+	if dialogue_bubble == null or not dialogue_bubble.has_method("play_sequence"):
+		return
+	if dialogue_bubble.has_method("set_lane"):
+		dialogue_bubble.set_lane("combat")
+	dialogue_bubble.play_sequence(formatted, "first_meet")
+
+func _format_meet_line(page: String) -> String:
+	# Only attach a speaker name when the page explicitly starts with "Name: ".
+	# Narration stays nameless so it is not read as the girl talking.
+	var body := page.strip_edges()
+	var colon := body.find(": ")
+	if colon > 0 and colon < 36:
+		var head := body.substr(0, colon).strip_edges()
+		if head.find("\n") < 0 and not head.begins_with("\""):
+			body = body.substr(colon + 2).strip_edges()
+			if body.contains("[name="):
+				return body
+			return "[name=%s]%s" % [head, body]
+	return body
+
 func _run_rest_room() -> void:
 	var heal := int(game_manager.player_max_health * 0.35)
 	game_manager.player_health = mini(game_manager.player_max_health, game_manager.player_health + heal)
