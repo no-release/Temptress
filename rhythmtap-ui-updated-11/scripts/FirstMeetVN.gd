@@ -1,13 +1,12 @@
 extends Control
-# =============================================================================
-# FirstMeetVN.gd â€” full-screen VN first-meet
-# Speaker plate above text box; full-body on the right behind the box.
-# =============================================================================
+# Fallback first-meet page. Combat is the real path; this only exists if
+# something still loads FirstMeetVN.tscn. Same subtitle styling, no header,
+# narration is nameless, whole-body art.
 
 const CHARS_PER_SEC := 42.0
 
 @onready var name_label: Label = $Margin/VBox/NameLabel
-@onready var dialogue_label: Label = $Margin/VBox/TextBox/Margin/VBox/DialogueLabel
+@onready var dialogue_label: RichTextLabel = $Margin/VBox/TextBox/Margin/VBox/DialogueLabel
 @onready var text_box: PanelContainer = $Margin/VBox/TextBox
 @onready var continue_hint: Label = $Margin/VBox/TextBox/Margin/VBox/ContinueHint
 @onready var character: TextureRect = $CharacterSprite
@@ -19,8 +18,24 @@ var _visible_chars: int = 0
 var _typing: bool = false
 var _accum: float = 0.0
 var _finishing: bool = false
-var _default_speaker: String = ""
 var _enemy_id: String = ""
+
+func _ready() -> void:
+	var title := get_node_or_null("Margin/VBox/Title")
+	if title:
+		title.visible = false
+	var enemy := FirstMeetBridge.pending_enemy
+	if enemy == "":
+		_finish()
+		return
+	_enemy_id = enemy
+	_apply_biome_bg()
+	_pages = FirstMeetScenes.enemy_pages(enemy)
+	if _pages.is_empty():
+		_pages = PackedStringArray(["..."])
+	_load_enemy_portrait(enemy)
+	text_box.gui_input.connect(_on_text_box_gui_input)
+	_show_page(0)
 
 func _apply_biome_bg() -> void:
 	var biome := "dungeon"
@@ -39,66 +54,53 @@ func _apply_biome_bg() -> void:
 	if has_node("BgArt") and ResourceLoader.exists(path):
 		$BgArt.texture = load(path) as Texture2D
 
-func _ready() -> void:
-	var enemy := FirstMeetBridge.pending_enemy
-	if enemy == "":
-		_finish()
-		return
-	_enemy_id = enemy
-	_apply_biome_bg()
-	_pages = FirstMeetScenes.enemy_pages(enemy)
-	if _pages.is_empty():
-		_pages = PackedStringArray(["..."])
-	_default_speaker = enemy.replace("_", " ").capitalize()
-	_load_enemy_portrait(enemy)
-	text_box.gui_input.connect(_on_text_box_gui_input)
-	_show_page(0)
-
 func _load_enemy_portrait(enemy: String) -> void:
-	var folder := enemy
-	if enemy == "troll_girl":
-		folder = "troll"
+	var folder := "troll" if enemy == "troll_girl" else enemy
+	# Prefer combat idle (full figure) over VN busts that crop the head.
 	var candidates: Array[String] = [
+		"res://enemy_images/%s/idle.png" % folder,
+		"res://enemy_images/%s/idle.webp" % folder,
 		"res://vn_portraits/%s_standing.png" % enemy,
 		"res://vn_portraits/%s_neutral.png" % enemy,
 		"res://vn_portraits/%s.png" % enemy,
-		"res://enemy_images/%s/idle.png" % folder,
-		"res://enemy_images/%s/idle.jpg" % folder,
-		"res://ui_art/character_placeholder.png",
 	]
 	for path in candidates:
 		if ResourceLoader.exists(path):
 			character.texture = load(path) as Texture2D
 			character.visible = true
+			character.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			character.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			return
 	character.visible = false
 
 func _split_speaker(page: String) -> Dictionary:
-	var speaker := _default_speaker
-	var body := page
-	var colon := page.find(": ")
-	if colon > 0 and colon < 48:
-		var head := page.substr(0, colon).strip_edges()
-		var first_nl := page.find("\n")
-		if head.find("\n") < 0 and (first_nl < 0 or colon < first_nl):
-			if not head.begins_with("\"") and head.length() < 40:
-				speaker = head
-				body = page.substr(colon + 2)
-	if speaker != "":
-		body = body.replace(speaker + ": ", "")
-	return {"speaker": speaker, "body": body.strip_edges()}
+	# Nameless unless the page explicitly starts with "Name: ".
+	var body := page.strip_edges()
+	var speaker := ""
+	var colon := body.find(": ")
+	if colon > 0 and colon < 36:
+		var head := body.substr(0, colon).strip_edges()
+		if head.find("\n") < 0 and not head.begins_with("\""):
+			speaker = head
+			body = body.substr(colon + 2).strip_edges()
+	return {"speaker": speaker, "body": body}
 
 func _show_page(i: int) -> void:
 	_page_index = i
 	var parsed: Dictionary = _split_speaker(String(_pages[i]))
-	var speaker: String = str(parsed.get("speaker", _default_speaker))
+	var speaker: String = str(parsed.get("speaker", ""))
 	_full_text = str(parsed.get("body", ""))
 	name_label.visible = speaker != ""
-	name_label.text = speaker
+	name_label.text = speaker.to_upper()
 	_visible_chars = 0
 	_typing = true
 	_accum = 0.0
-	dialogue_label.text = _full_text
+	var shown := _full_text
+	if SubtitleMarkup and SubtitleMarkup.has_method("expand"):
+		var wrapped: Dictionary = SubtitleMarkup.expand(_full_text, "first_meet")
+		shown = str(wrapped.get("bbcode", _full_text))
+	dialogue_label.bbcode_enabled = true
+	dialogue_label.text = shown
 	dialogue_label.visible_characters = 0
 	continue_hint.visible = false
 
@@ -115,7 +117,10 @@ func _process(delta: float) -> void:
 	if _visible_chars >= _full_text.length():
 		_typing = false
 		continue_hint.visible = true
-		continue_hint.text = "Click to continueâ€¦" if _page_index + 1 < _pages.size() else "Click to begin the fightâ€¦"
+		if _page_index + 1 < _pages.size():
+			continue_hint.text = "Click to continue..."
+		else:
+			continue_hint.text = "Click to begin the fight..."
 
 func _on_text_box_gui_input(event: InputEvent) -> void:
 	var clicked := false
@@ -138,10 +143,13 @@ func _on_text_clicked() -> void:
 		return
 	if _typing:
 		_visible_chars = _full_text.length()
-		dialogue_label.visible_characters = _visible_chars
+		dialogue_label.visible_characters = -1
 		_typing = false
 		continue_hint.visible = true
-		continue_hint.text = "Click to continueâ€¦" if _page_index + 1 < _pages.size() else "Click to begin the fightâ€¦"
+		if _page_index + 1 < _pages.size():
+			continue_hint.text = "Click to continue..."
+		else:
+			continue_hint.text = "Click to begin the fight..."
 		SoundGen.play_ui_click()
 		return
 	if _page_index + 1 < _pages.size():
