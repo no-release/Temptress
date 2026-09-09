@@ -1,16 +1,21 @@
 extends PanelContainer
 class_name CombatSubtitle
-# Bottom subtitle plate. Fixed width; height hugs one line and grows only if wrapped.
+# Bottom subtitle plate. Can play a queued first-meet / receptionist sequence.
 
 const HOLD_SEC := 3.6
 const FADE_IN_SEC := 0.12
 const FADE_OUT_SEC := 0.45
+const PAGE_FADE_SEC := 0.18
 const PLATE_WIDTH := 640.0
 const LINE_H := 26.0
 const PAD_Y := 16.0
 const BOTTOM_GAP_COMBAT := 128.0
 const BOTTOM_GAP_SURVIVAL := 248.0
 const BOTTOM_GAP_DRAIN := 360.0
+const BOTTOM_GAP_HUB := 88.0
+const FIRST_MEET_LINGER := 2.85
+
+signal sequence_finished
 
 @onready var speaker_label: Label = $Margin/VBox/Speaker
 @onready var body: RichTextLabel = $Margin/VBox/Body
@@ -22,6 +27,10 @@ var _target_chars: int = 0
 var _active: bool = false
 var _bottom_gap: float = BOTTOM_GAP_COMBAT
 var _lane: String = "combat"
+var _queue: Array = []
+var _playing_sequence: bool = false
+var _page_linger: float = FIRST_MEET_LINGER
+var _turning_page: bool = false
 
 func _ready() -> void:
 	visible = false
@@ -40,6 +49,8 @@ func _ready() -> void:
 		body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		body.custom_minimum_size = Vector2(PLATE_WIDTH - 36.0, LINE_H)
 
+func is_playing_sequence() -> bool:
+	return _playing_sequence
 
 func set_lane(lane: String) -> void:
 	_lane = lane
@@ -48,14 +59,34 @@ func set_lane(lane: String) -> void:
 			_bottom_gap = BOTTOM_GAP_SURVIVAL
 		"drain", "punishment":
 			_bottom_gap = BOTTOM_GAP_DRAIN
+		"hub", "receptionist":
+			_bottom_gap = BOTTOM_GAP_HUB
 		_:
 			_bottom_gap = BOTTOM_GAP_COMBAT
 	if visible:
 		_fit_height()
 
+func play_sequence(pages: PackedStringArray, situation: String = "first_meet", linger: float = FIRST_MEET_LINGER) -> void:
+	_queue.clear()
+	for page in pages:
+		var text := String(page).strip_edges()
+		if text == "":
+			continue
+		_queue.append({"text": text, "situation": situation})
+	_page_linger = linger
+	_playing_sequence = true
+	_turning_page = false
+	if _queue.is_empty():
+		_playing_sequence = false
+		sequence_finished.emit()
+		return
+	_advance_queue()
 
 func show_line(text: String, situation: String = "") -> void:
 	if text.strip_edges() == "":
+		return
+	if _playing_sequence and situation not in ["first_meet", "receptionist", "notice"]:
+		_queue.append({"text": text, "situation": situation})
 		return
 	var parsed: Dictionary = SubtitleMarkup.expand(text, situation)
 	_cps = float(parsed.get("cps", 40.0))
@@ -68,7 +99,9 @@ func show_line(text: String, situation: String = "") -> void:
 		body.visible_characters = 0
 	_target_chars = _visible_length()
 	_typed = 0.0
-	if situation in ["drain", "losing", "gameover_remarks"]:
+	if _playing_sequence:
+		_hold_left = _page_linger
+	elif situation in ["drain", "losing", "gameover_remarks"]:
 		set_lane("drain")
 		_hold_left = HOLD_SEC + 2.4
 	elif situation in ["player_defeated"]:
@@ -77,22 +110,30 @@ func show_line(text: String, situation: String = "") -> void:
 	else:
 		_hold_left = HOLD_SEC
 	_active = true
+	_turning_page = false
 	visible = true
 	modulate.a = 0.0
 	_fit_height()
 	call_deferred("_fit_height")
 
-
 func show_plain(text: String) -> void:
 	show_line(text, "notice")
-
 
 func hide_now() -> void:
 	_active = false
 	_hold_left = 0.0
+	_turning_page = false
 	visible = false
 	modulate.a = 0.0
 
+func _advance_queue() -> void:
+	if _queue.is_empty():
+		_playing_sequence = false
+		_turning_page = false
+		sequence_finished.emit()
+		return
+	var item: Dictionary = _queue.pop_front()
+	show_line(str(item.get("text", "")), str(item.get("situation", "")))
 
 func _process(delta: float) -> void:
 	if not _active:
@@ -106,13 +147,17 @@ func _process(delta: float) -> void:
 	if body:
 		body.visible_characters = -1
 	_hold_left -= delta
-	if _hold_left <= 0.0:
-		modulate.a = maxf(0.0, modulate.a - delta / FADE_OUT_SEC)
-		if modulate.a <= 0.01:
-			hide_now()
-	else:
+	if _hold_left > 0.0:
 		modulate.a = minf(1.0, modulate.a + delta / FADE_IN_SEC)
-
+		return
+	var fade := PAGE_FADE_SEC if (_playing_sequence and not _queue.is_empty()) else FADE_OUT_SEC
+	modulate.a = maxf(0.0, modulate.a - delta / fade)
+	if modulate.a > 0.01:
+		return
+	if _playing_sequence:
+		_advance_queue()
+	else:
+		hide_now()
 
 func _fit_height() -> void:
 	size.x = PLATE_WIDTH
@@ -132,7 +177,6 @@ func _fit_height() -> void:
 	size = Vector2(PLATE_WIDTH, h)
 	_pin_bottom(h)
 
-
 func _pin_bottom(h: float) -> void:
 	anchor_left = 0.5
 	anchor_right = 0.5
@@ -142,7 +186,6 @@ func _pin_bottom(h: float) -> void:
 	offset_right = PLATE_WIDTH * 0.5
 	offset_bottom = -_bottom_gap
 	offset_top = -_bottom_gap - h
-
 
 func _visible_length() -> int:
 	if body == null:

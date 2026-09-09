@@ -1,12 +1,8 @@
 extends Control
-# =============================================================================
-# ReceptionistBoot.gd -- guild-door boot VN + hub
-# Speaker plate above text box; body portrait on the right behind the box.
-# When greeting ends, textbox/plate hide and hub buttons remain.
-# =============================================================================
+# Receptionist boot uses the combat subtitle plate. Pages auto-advance with a linger.
 
-const CHARS_PER_SEC := 42.0
 const DEFAULT_SPEAKER := "Receptionist"
+const LINGER := 2.7
 
 @onready var title_label: Label = $Margin/VBox/Title
 @onready var door_flavor: Label = $Margin/VBox/DoorFlavor
@@ -21,13 +17,10 @@ const DEFAULT_SPEAKER := "Receptionist"
 @onready var character: TextureRect = $CharacterSprite
 
 var _pages: PackedStringArray = []
-var _page_index: int = 0
-var _full_text: String = ""
-var _visible_chars: int = 0
-var _typing: bool = false
-var _accum: float = 0.0
-var _finishing: bool = false
 var _is_contract: bool = false
+var _sub: CombatSubtitle = null
+var _sign_button: Button = null
+var _finishing: bool = false
 
 func _ready() -> void:
 	MusicDirector.stop()
@@ -35,7 +28,8 @@ func _ready() -> void:
 	guild_button.pressed.connect(_on_guild)
 	home_button.pressed.connect(_on_home)
 	menu_button.pressed.connect(_on_menu)
-	text_box.gui_input.connect(_on_text_box_gui_input)
+	_hide_old_vn_chrome()
+	_attach_subtitle()
 	_load_receptionist_portrait()
 	if not MetaSave.receptionist_contract_signed:
 		_is_contract = true
@@ -49,7 +43,29 @@ func _ready() -> void:
 		)
 	if _pages.is_empty():
 		_pages = PackedStringArray(["Receptionist: Welcome."])
-	_show_page(0)
+	var formatted := PackedStringArray()
+	for page in _pages:
+		formatted.append(_format_line(String(page)))
+	_sub.set_lane("receptionist")
+	_sub.play_sequence(formatted, "receptionist", LINGER)
+	if not _sub.sequence_finished.is_connected(_on_sequence_finished):
+		_sub.sequence_finished.connect(_on_sequence_finished)
+
+func _hide_old_vn_chrome() -> void:
+	if name_label:
+		name_label.visible = false
+	if text_box:
+		text_box.visible = false
+		text_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if continue_hint:
+		continue_hint.visible = false
+	if dialogue_label:
+		dialogue_label.visible = false
+
+func _attach_subtitle() -> void:
+	var packed: PackedScene = load("res://scenes/DialogueBubble.tscn") as PackedScene
+	_sub = packed.instantiate() as CombatSubtitle
+	add_child(_sub)
 
 func _load_receptionist_portrait() -> void:
 	var emotion := "neutral"
@@ -72,114 +88,52 @@ func _load_receptionist_portrait() -> void:
 			return
 	character.visible = false
 
-func _split_speaker(page: String) -> Dictionary:
+func _format_line(page: String) -> String:
 	var speaker := DEFAULT_SPEAKER
-	var body := page
-	var colon := page.find(": ")
+	var body := page.strip_edges()
+	var colon := body.find(": ")
 	if colon > 0 and colon < 48:
-		var head := page.substr(0, colon).strip_edges()
-		var first_nl := page.find("\n")
-		if head.find("\n") < 0 and (first_nl < 0 or colon < first_nl):
+		var head := body.substr(0, colon).strip_edges()
+		if head.find("\n") < 0:
 			speaker = head
-			body = page.substr(colon + 2)
-	body = body.replace(speaker + ": ", "")
+			body = body.substr(colon + 2).strip_edges()
 	body = body.replace(DEFAULT_SPEAKER + ": ", "")
-	return {"speaker": speaker, "body": body.strip_edges()}
+	if body.contains("[name="):
+		return body
+	return "[name=%s]%s" % [speaker, body]
 
-func _show_page(i: int) -> void:
-	_page_index = i
-	var parsed: Dictionary = _split_speaker(String(_pages[i]))
-	var speaker: String = str(parsed.get("speaker", DEFAULT_SPEAKER))
-	_full_text = str(parsed.get("body", ""))
-	text_box.visible = true
-	if speaker == "":
-		name_label.visible = false
-	else:
-		name_label.visible = true
-		name_label.text = speaker
-	_visible_chars = 0
-	_typing = true
-	_accum = 0.0
-	dialogue_label.text = _full_text
-	dialogue_label.visible_characters = 0
-	continue_hint.visible = false
-
-func _process(delta: float) -> void:
-	if not _typing:
+func _on_sequence_finished() -> void:
+	if _finishing:
 		return
-	_accum += delta * CHARS_PER_SEC
-	var advance := int(_accum)
-	if advance <= 0:
-		return
-	_accum -= float(advance)
-	_visible_chars = mini(_full_text.length(), _visible_chars + advance)
-	dialogue_label.visible_characters = _visible_chars
-	if _visible_chars >= _full_text.length():
-		_typing = false
-		continue_hint.visible = true
-		continue_hint.text = _hint_for_current_page()
-
-func _hint_for_current_page() -> String:
-	var last := _page_index + 1 >= _pages.size()
-	if not last:
-		return "Click to continue..."
 	if _is_contract:
-		return "Click to sign the contract..."
-	return "Click when ready..."
-
-func _on_text_box_gui_input(event: InputEvent) -> void:
-	var clicked := false
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		clicked = true
-	elif event is InputEventScreenTouch and event.pressed:
-		clicked = true
-	if not clicked:
+		_show_sign_button()
 		return
-	accept_event()
-	_on_text_clicked()
+	hub_box.visible = true
 
-func _unhandled_input(event: InputEvent) -> void:
-	if hub_box.visible:
+func _show_sign_button() -> void:
+	if _sign_button and is_instance_valid(_sign_button):
+		_sign_button.visible = true
 		return
-	if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_select"):
-		_on_text_clicked()
-		get_viewport().set_input_as_handled()
+	_sign_button = Button.new()
+	_sign_button.text = "- SIGN THE CONTRACT -"
+	_sign_button.focus_mode = Control.FOCUS_NONE
+	_sign_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_sign_button.offset_left = -180.0
+	_sign_button.offset_right = 180.0
+	_sign_button.offset_top = -168.0
+	_sign_button.offset_bottom = -128.0
+	_sign_button.add_theme_font_size_override("font_size", 18)
+	add_child(_sign_button)
+	_sign_button.pressed.connect(_on_sign)
 
-func _on_text_clicked() -> void:
-	if _finishing or hub_box.visible:
-		return
-	if _typing:
-		_visible_chars = _full_text.length()
-		dialogue_label.visible_characters = _visible_chars
-		_typing = false
-		continue_hint.visible = true
-		continue_hint.text = _hint_for_current_page()
-		SoundGen.play_ui_click()
-		return
-	if _page_index + 1 < _pages.size():
-		SoundGen.play_ui_click()
-		_show_page(_page_index + 1)
-	else:
-		SoundGen.play_ui_click()
-		_finish_vn()
-
-func _finish_vn() -> void:
+func _on_sign() -> void:
 	if _finishing:
 		return
 	_finishing = true
-	if _is_contract:
-		MetaSave.sign_receptionist_contract()
-		MetaSave.save_to_disk()
-		get_tree().change_scene_to_file("res://scenes/GuildBoard.tscn")
-		return
-	# Done talking — close VN chrome, keep hub
-	_typing = false
-	continue_hint.visible = false
-	name_label.visible = false
-	text_box.visible = false
-	text_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hub_box.visible = true
-	_finishing = false
+	SoundGen.play_ui_click()
+	MetaSave.sign_receptionist_contract()
+	MetaSave.save_to_disk()
+	get_tree().change_scene_to_file("res://scenes/GuildBoard.tscn")
 
 func _on_guild() -> void:
 	SoundGen.play_ui_click()
