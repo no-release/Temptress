@@ -69,7 +69,9 @@ func _on_swapped(type_name: String, gm: Node) -> void:
 		gm.pattern_accents = accents
 	if gm.get("active_enemy") != null:
 		var base: int = int(gm.active_enemy.beats_in_turn)
-		var eff: int = maxi(6, int(round(float(base) / intensity)))
+		if "beats_in_turn_base" in gm.active_enemy:
+			base = int(gm.active_enemy.beats_in_turn_base)
+		var eff: int = maxi(4, int(round(float(base) / intensity)))
 		gm.active_enemy.beats_in_turn = eff
 		gm.set_meta("p12_effective_beats", eff)
 		if "effective_beats_in_turn" in gm:

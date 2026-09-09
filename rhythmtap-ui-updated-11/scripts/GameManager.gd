@@ -43,6 +43,7 @@ class EnemyData:
 	var max_health:    int
 	var damage:        int
 	var beats_in_turn: int   # how many beats before the turn flips
+	var beats_in_turn_base: int
 	var base_bpm:      float # BPM during normal combat
 	var xp:            int
 	var gold:          int
@@ -51,7 +52,9 @@ class EnemyData:
 
 	func _init(p_name, p_max_hp, p_dmg, p_beats, p_bpm, p_xp, p_gold, p_lines):
 		name = p_name; max_health = p_max_hp; damage = p_dmg
-		beats_in_turn = p_beats; base_bpm = p_bpm
+		beats_in_turn = p_beats
+		beats_in_turn_base = p_beats
+		base_bpm = p_bpm
 		xp = p_xp; gold = p_gold; lines = p_lines
 
 	func get_line(situation: String) -> String:
@@ -81,7 +84,7 @@ var ENEMY_DATA: Dictionary = {}
 
 func _build_enemies():
 	# ── Tier 1: weak / early ──────────────────────────────────────────────────
-	ENEMY_DATA["slime_girl"] = EnemyData.new("slime_girl", 28, 5, 20, 120.0, 25, 10, {
+	ENEMY_DATA["slime_girl"] = EnemyData.new("slime_girl", 28, 3, 9, 120.0, 25, 10, {
 		"taunt": [
 			"[drip]Ooh, your rhythm's all sticky already~[/drip]",
 			"[tease]Slippery beats for a slippery boy~[/tease]",
@@ -121,7 +124,7 @@ func _build_enemies():
 			"[moan]Mmm. Sticky defeat tastes sweet.[/moan]",
 		],
 	})
-	ENEMY_DATA["goblin_girl"] = EnemyData.new("goblin_girl", 40, 8, 22, 135.0, 40, 15, {
+	ENEMY_DATA["goblin_girl"] = EnemyData.new("goblin_girl", 40, 4, 10, 135.0, 40, 15, {
 		"taunt": [
 			"[giggle]Hehe, too slow![/giggle]",
 			"[brat]Can't keep up, can ya?[/brat]",
@@ -160,7 +163,7 @@ func _build_enemies():
 			"[foot]Remember my soles next time you get hard.[/foot]",
 		],
 	})
-	ENEMY_DATA["succubus"] = EnemyData.new("succubus", 55, 11, 16, 125.0, 65, 25, {
+	ENEMY_DATA["succubus"] = EnemyData.new("succubus", 55, 5, 8, 125.0, 65, 25, {
 		"taunt": [
 			"[velvet]Feel that pulse?[/velvet] [heart]It's matching your heartbeat~[/heart]",
 			"[lick]I can already taste how desperate you are.[/lick]",
@@ -198,7 +201,7 @@ func _build_enemies():
 			"[velvet]I'll be tasting that loss for days.[/velvet]",
 		],
 	})
-	ENEMY_DATA["kitsune"] = EnemyData.new("kitsune", 65, 12, 14, 115.0, 80, 30, {
+	ENEMY_DATA["kitsune"] = EnemyData.new("kitsune", 65, 6, 7, 115.0, 80, 30, {
 		"taunt": [
 			"[sly]Nine tails, one rhythm. Keep up~[/sly]",
 			"[giggle]Your ears are turning red already.[/giggle]",
@@ -236,7 +239,7 @@ func _build_enemies():
 			"[sly]Tails remember every blush.[/sly]",
 		],
 	})
-	ENEMY_DATA["troll_girl"] = EnemyData.new("troll_girl", 85, 15, 10, 90.0, 110, 40, {
+	ENEMY_DATA["troll_girl"] = EnemyData.new("troll_girl", 85, 8, 6, 90.0, 110, 40, {
 		"taunt": [
 			"[shout]TROLL GIRL SMASH RHYTHM.[/shout]",
 			"[growl]You think you can keep up? I doubt it.[/growl]",
@@ -274,7 +277,7 @@ func _build_enemies():
 			"[giantess]Next time, last longer under me.[/giantess]",
 		],
 	})
-	ENEMY_DATA["dragoness"] = EnemyData.new("dragoness", 110, 18, 8, 80.0, 150, 55, {
+	ENEMY_DATA["dragoness"] = EnemyData.new("dragoness", 110, 9, 5, 80.0, 150, 55, {
 		"taunt": [
 			"[queen]A dragoness does not rush.[/queen] [echo]The beat will claim you.[/echo]",
 			"[command]Kneel to the rhythm,[/command] [prey]little treasure-hunter.[/prey]",
@@ -317,7 +320,7 @@ func _build_enemies():
 # Alpha starting values — balance hasn't been considered yet.
 var player_max_health: int   = 30
 var player_health:     int   = 30
-var player_damage:     int   = 10
+var player_damage:     int   = 5
 var player_xp:         int   = 0
 var player_level:      int   = 1
 var player_gold:       int   = 0
@@ -398,7 +401,8 @@ func _apply_meta_stats() -> void:
 	player_level = MetaSave.player_level
 	player_xp = MetaSave.player_xp
 	player_max_health = MetaSave.base_max_health
-	player_damage = MetaSave.base_damage
+	# Combat hits more often now; deal half of meta ATK so fights last about as long.
+	player_damage = maxi(1, int(round(float(MetaSave.base_damage) * 0.5)))
 	player_gold = MetaSave.starting_gold_bonus  # run bag starts with home purse upgrades
 	_apply_active_run_modifiers()
 	player_health = player_max_health
@@ -650,12 +654,12 @@ func _level_up():
 	# Alpha levelling: flat percentage scaling. No cap, no diminishing returns yet.
 	player_level      += 1
 	player_max_health  = int(player_max_health * 1.25)
-	player_damage      = int(player_damage     * 1.20)
+	player_damage      = maxi(1, int(round(float(player_damage) * 1.20)))
 	player_health      = player_max_health
 	MetaSave.player_level = player_level
 	MetaSave.player_xp = player_xp
 	MetaSave.base_max_health = player_max_health
-	MetaSave.base_damage = player_damage
+	MetaSave.base_damage = maxi(1, int(round(float(player_damage) / 0.5)))
 	MetaSave.save_to_disk()
 	emit_signal("player_stats_changed")
 

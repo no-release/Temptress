@@ -14,6 +14,7 @@ var enemy_textures:  Dictionary = {}
 var biome_texture:   Texture2D = null
 var current_state:   String     = "idle"
 var active_type:     String     = ""
+var show_enemy:      bool       = true
 var _loading_count:  int        = 0
 var _stagger_tween:  Tween      = null
 
@@ -99,6 +100,11 @@ func on_beat(_beat_num: int):
 	pulse     = 1.0
 	img_scale = 1.05
 
+func set_enemy_visible(v: bool) -> void:
+	show_enemy = v
+	queue_redraw()
+
+
 func on_enemy_state_changed(new_state: String):
 	current_state = new_state
 
@@ -135,6 +141,8 @@ func _draw():
 	else:
 		draw_rect(Rect2(0, 0, w, h), Color(0.03, 0.03, 0.05, 1.0))
 
+	if not show_enemy:
+		return
 	var tex = enemy_textures.get(current_state, null)
 	if tex == null:
 		tex = enemy_textures.get("idle", null)

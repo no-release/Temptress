@@ -165,6 +165,10 @@ func _set_beatbar_visible(show: bool) -> void:
 
 func _show_treasure_screen(gold_reward: int):
 	_set_beatbar_visible(false)
+	if background and background.has_method("set_enemy_visible"):
+		background.set_enemy_visible(false)
+	if enemy_hp_rail:
+		enemy_hp_rail.visible = false
 	if dialogue_bubble and dialogue_bubble.has_method("hide_now"):
 		dialogue_bubble.hide_now()
 	var bag_gold := 0
@@ -180,6 +184,10 @@ func _show_treasure_screen(gold_reward: int):
 func _on_treasure_continue():
 	SoundGen.play_ui_click()
 	treasure_screen.visible = false
+	if background and background.has_method("set_enemy_visible"):
+		background.set_enemy_visible(true)
+	if enemy_hp_rail:
+		enemy_hp_rail.visible = true
 	_set_beatbar_visible(true)
 	room_manager.advance_room()
 func _on_room_started(room: Dictionary):
