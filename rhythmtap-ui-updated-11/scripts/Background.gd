@@ -186,18 +186,19 @@ func _draw():
 	if region.size.x < 8.0 or region.size.y < 8.0:
 		region = Rect2(Vector2.ZERO, ts)
 
-	# Fit the FIGURE (not the padded canvas) fully on screen.
+	# Fit the FIGURE (not the padded canvas) fully on screen, centered.
 	# Leave the bottom band for the beat bar + combat subtitle plate.
-	var avail := Rect2(w * 0.18, h * 0.02, w * 0.80, h * 0.74)
-	var scale: float = minf(avail.size.x / region.size.x, avail.size.y / region.size.y) * img_scale
+	var avail_h: float = h * 0.74
+	var avail_y: float = h * 0.02
+	var scale: float = minf((w * 0.92) / region.size.x, avail_h / region.size.y) * img_scale
 	var draw_w: float = region.size.x * scale
 	var draw_h: float = region.size.y * scale
-	var ox: float = avail.position.x + avail.size.x - draw_w + stagger_x
-	var oy: float = avail.position.y + (avail.size.y - draw_h) * 0.55
-	if oy < avail.position.y:
-		oy = avail.position.y
-	if oy + draw_h > avail.position.y + avail.size.y:
-		oy = avail.position.y + avail.size.y - draw_h
+	var ox: float = (w - draw_w) * 0.5 + stagger_x
+	var oy: float = avail_y + (avail_h - draw_h) * 0.5
+	if oy < avail_y:
+		oy = avail_y
+	if oy + draw_h > avail_y + avail_h:
+		oy = avail_y + avail_h - draw_h
 	var bright  = 0.78 + pulse * 0.22
 	draw_texture_rect_region(
 		tex,
