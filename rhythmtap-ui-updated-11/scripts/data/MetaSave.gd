@@ -22,14 +22,14 @@ var base_max_health: int = 30
 var base_damage: int = 10
 var banked_gold: int = 0
 
-# ── Progression / unlocks ──────────────────────────────────────────────────
+# ── Progression / unlocks ──────────────────────────────────
 var unlocked_biomes: PackedStringArray = PackedStringArray(["dungeon"])
 var unlocked_upgrades: PackedStringArray = PackedStringArray()
 ## upgrade_id -> rank stored as "id:rank" entries in unlocked_upgrades
 var starting_gold_bonus: int = 0
 var survival_cushion: int = 0
 
-# ── Town / receptionist ────────────────────────────────────────────────────
+# ── Town / receptionist ──────────────────────────────────
 ## Soft affinity: negative after fails, recovers on clears. Drives dialogue.
 var receptionist_affinity: int = 0
 var last_outcome: String = ""  # "clear" | "concede" | ""
@@ -44,7 +44,7 @@ var enemy_last_result: Dictionary = {}
 ## Phase 13 — current guild board quest offers (Array[Dictionary] QuestDef fields)
 var board_offers: Array = []
 
-# ── Pending punishments for the NEXT run ───────────────────────────────────
+# ── Pending punishments for the NEXT run ───────────────────
 var pending_modifiers: Array = []  # Array[ModifierDef] (serialize carefully)
 
 signal meta_changed()
@@ -63,6 +63,11 @@ func mark_enemy_met(enemy_id: String) -> void:
 		return
 	met_enemies.append(enemy_id)
 	emit_signal("meta_changed")
+
+func clear_met_enemies() -> void:
+	met_enemies = PackedStringArray()
+	emit_signal("meta_changed")
+	save_to_disk()
 
 func get_enemy_last_result(enemy_id: String) -> String:
 	return str(enemy_last_result.get(enemy_id, ""))

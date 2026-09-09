@@ -14,6 +14,8 @@ const LEVEL_DRAIN := {
 }
 
 var _hooked: Dictionary = {}
+var _lv_watch: Dictionary = {}
+var _fixing_hp: bool = false
 
 func _ready() -> void:
 	get_tree().node_added.connect(_on_node_added)
@@ -45,6 +47,39 @@ func _try_hook(n: Node) -> void:
 		n.enemy_defeated.connect(func(g): _on_won(g, n))
 	if n.has_signal("enter_punishment"):
 		n.enter_punishment.connect(func(e): _on_lost(e, n))
+	if n.has_signal("player_stats_changed"):
+		n.player_stats_changed.connect(func(): _on_stats(n))
+	_snapshot(n)
+
+func _snapshot(gm: Node) -> void:
+	_lv_watch[gm.get_instance_id()] = {
+		"lv": int(gm.player_level),
+		"hp": int(gm.player_health),
+		"mx": int(gm.player_max_health),
+	}
+
+func _on_stats(gm: Node) -> void:
+	if _fixing_hp or gm == null:
+		return
+	var id := gm.get_instance_id()
+	var prev: Dictionary = _lv_watch.get(id, {})
+	if prev.is_empty():
+		_snapshot(gm)
+		return
+	var old_lv := int(prev.get("lv", gm.player_level))
+	var old_hp := int(prev.get("hp", gm.player_health))
+	var old_mx := int(prev.get("mx", gm.player_max_health))
+	var new_lv := int(gm.player_level)
+	var new_mx := int(gm.player_max_health)
+	var new_hp := int(gm.player_health)
+	# Level-up used to refill HP. Keep the wound gap; only bank the new max slice.
+	if new_lv > old_lv and new_mx > old_mx and new_hp == new_mx and old_hp < old_mx:
+		var gained := new_mx - old_mx
+		_fixing_hp = true
+		gm.player_health = mini(new_mx, old_hp + maxi(0, gained))
+		gm.emit_signal("player_stats_changed")
+		_fixing_hp = false
+	_snapshot(gm)
 
 func _tier(t: String) -> int:
 	if t in TIER1:
@@ -118,3 +153,4 @@ func _on_lost(_enemy: String, gm: Node) -> void:
 	var msg := flavor if lose == "" else "%s\n%s" % [flavor, lose]
 	gm.emit_signal("enemy_dialogue", msg, "drain")
 	gm.emit_signal("player_stats_changed")
+	_snapshot(gm)
