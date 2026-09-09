@@ -4,6 +4,7 @@ extends Control
 # =============================================================================
 # Draws biome plate from bg_images, then enemy cutout (idle/attack/hurt).
 # Folder aliases: troll_girl -> troll. Missing art: soft empty (no old mismatched JPGs).
+# Tall 1080x1920 sheets are cropped to the opaque figure so the whole body fits.
 # =============================================================================
 
 var pulse:     float = 0.0
@@ -11,6 +12,7 @@ var img_scale: float = 1.0
 var stagger_x: float = 0.0
 
 var enemy_textures:  Dictionary = {}
+var enemy_regions:   Dictionary = {}
 var biome_texture:   Texture2D = null
 var current_state:   String     = "idle"
 var active_type:     String     = ""
@@ -55,6 +57,7 @@ func load_enemy_assets(type_name: String):
 		return
 	active_type     = type_name
 	enemy_textures.clear()
+	enemy_regions.clear()
 	current_state   = "idle"
 	_load_biome_from_run()
 
@@ -94,11 +97,39 @@ func _on_loaded(state: String, img: Image, thread: Thread):
 	_loading_count -= 1
 	if img:
 		enemy_textures[state] = ImageTexture.create_from_image(img)
+		enemy_regions[state] = _opaque_rect(img)
 	queue_redraw()
+
+func _opaque_rect(img: Image) -> Rect2:
+	var w := img.get_width()
+	var h := img.get_height()
+	var min_x := w
+	var min_y := h
+	var max_x := -1
+	var max_y := -1
+	var step := 3
+	for y in range(0, h, step):
+		for x in range(0, w, step):
+			if img.get_pixel(x, y).a > 0.08:
+				if x < min_x:
+					min_x = x
+				if y < min_y:
+					min_y = y
+				if x > max_x:
+					max_x = x
+				if y > max_y:
+					max_y = y
+	if max_x < min_x:
+		return Rect2(0, 0, w, h)
+	min_x = maxi(0, min_x - 12)
+	min_y = maxi(0, min_y - 12)
+	max_x = mini(w - 1, max_x + 12)
+	max_y = mini(h - 1, max_y + 12)
+	return Rect2(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
 
 func on_beat(_beat_num: int):
 	pulse     = 1.0
-	img_scale = 1.05
+	img_scale = 1.04
 
 func set_enemy_visible(v: bool) -> void:
 	show_enemy = v
@@ -144,24 +175,33 @@ func _draw():
 	if not show_enemy:
 		return
 	var tex = enemy_textures.get(current_state, null)
+	var region: Rect2 = enemy_regions.get(current_state, Rect2())
 	if tex == null:
 		tex = enemy_textures.get("idle", null)
+		region = enemy_regions.get("idle", Rect2())
 	if tex == null:
 		return
 
-	var ts      = tex.get_size()
-	# Tall 1080x1920 sheets have large empty padding — overscale so the FIGURE reads big.
-	# Cover-ish: fill ~140% of screen height, allow sides to crop.
-	var scale   = (h * 1.85) / maxf(1.0, ts.y) * img_scale
-	# Keep a minimum presence on ultrawide / short windows
-	var min_w_scale :float= (w * 0.95) / maxf(1.0, ts.x)
-	if scale < min_w_scale * 0.55:
-		scale = min_w_scale * 0.55
-	var draw_w  = ts.x * scale
-	var draw_h  = ts.y * scale
-	var ox      = (w - draw_w) / 2.0 + stagger_x
-	# Bias upward so head/torso sit in the upper 2/3 (textbox/beatbar eat the bottom)
-	var oy      = (h - draw_h) * 0.15
+	var ts = tex.get_size()
+	if region.size.x < 8.0 or region.size.y < 8.0:
+		region = Rect2(Vector2.ZERO, ts)
+
+	# Fit the FIGURE (not the padded canvas) fully on screen.
+	# Leave the bottom band for the beat bar + combat subtitle plate.
+	var avail := Rect2(w * 0.18, h * 0.02, w * 0.80, h * 0.74)
+	var scale: float = minf(avail.size.x / region.size.x, avail.size.y / region.size.y) * img_scale
+	var draw_w: float = region.size.x * scale
+	var draw_h: float = region.size.y * scale
+	var ox: float = avail.position.x + avail.size.x - draw_w + stagger_x
+	var oy: float = avail.position.y + (avail.size.y - draw_h) * 0.55
+	if oy < avail.position.y:
+		oy = avail.position.y
+	if oy + draw_h > avail.position.y + avail.size.y:
+		oy = avail.position.y + avail.size.y - draw_h
 	var bright  = 0.78 + pulse * 0.22
-	draw_texture_rect(tex, Rect2(ox, oy, draw_w, draw_h), false,
-		Color(bright, bright, bright, 1.0))
+	draw_texture_rect_region(
+		tex,
+		Rect2(ox, oy, draw_w, draw_h),
+		region,
+		Color(bright, bright, bright, 1.0)
+	)
